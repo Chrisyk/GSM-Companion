@@ -30,8 +30,12 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.flow.Flow
 
 import kotlinx.coroutines.launch
+
+private val hostnameLabelRegex = Regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
+private val ipv4Regex = Regex("""^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$""")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,9 +72,21 @@ fun LandingScreen(navController: NavController){
                 name = "AYN Thor Companion",
             )
             DefaultGateway()
-            YomitanPort()
-            AnkiConnectPort()
-
+            val context = LocalContext.current
+            val yomitanPort by APIConfs.getYomitanPort(context)
+                .collectAsState(initial = 19633)
+            val ankiConnectPort by APIConfs.getAnkiConnectPort(context)
+                .collectAsState(initial = 8765)
+            ConfigPort(
+                "Yomitan",
+                yomitanPort,
+                onSave = { port -> APIConfs.setYomitanPort(context, port) },
+            )
+            ConfigPort(
+                "AnkiConnect",
+                ankiConnectPort,
+                onSave = { port -> APIConfs.setAnkiConnectPort(context, port) },
+            )
         }
 
     }
@@ -91,7 +107,6 @@ fun TextHookerPageButton(onClick: () -> Unit) {
 
 @Composable
 fun DefaultGateway(){
-
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val savedIP by APIConfs.getDefaultGateway(context)
@@ -100,6 +115,7 @@ fun DefaultGateway(){
     LaunchedEffect(savedIP){
         input = savedIP
     }
+    val isValid = GatewayCheck(input)
     Column() {
         Text (
             text = "Tailscale/Default Gateway IP ($savedIP)"
@@ -108,7 +124,13 @@ fun DefaultGateway(){
             TextField(
                 value = input,
                 onValueChange = { input = it },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                isError = input.isNotBlank() && !isValid,
+                supportingText = {
+                    if (input.isNotBlank() && !isValid) {
+                        Text("Enter hostname/IP only, no scheme, port, or path")
+                    }
+                }
             )
             Button(onClick = {
                 if (input.isNotBlank()) {
@@ -122,62 +144,38 @@ fun DefaultGateway(){
 }
 
 @Composable
-fun YomitanPort(){
-    val context = LocalContext.current
+fun ConfigPort(
+    label: String,
+    savedPort: Int,
+    onSave: suspend (Int) -> Unit
+){
     val scope = rememberCoroutineScope()
-    val savedPort by APIConfs.getYomitanPort(context)
-        .collectAsState(initial = 19633)
     var input by remember { mutableStateOf("") }
     LaunchedEffect(savedPort){
         input = savedPort.toString()
     }
+    val isValid = PortCheck(input)
     Column() {
         Text (
-            text = "Yomitan API port ($savedPort)"
+            text = "$label API port ($savedPort)"
         )
         Row() {
             TextField(
                 value = input,
                 onValueChange = { input = it },
-                modifier = Modifier.weight(1f)
-            )
-            Button(onClick = {
-                val port = input.toIntOrNull()
-                if (port != null) {
-                    scope.launch {
-                        APIConfs.setYomitanPort(context, port)
+                modifier = Modifier.weight(1f),
+                isError = input.isNotBlank() && !isValid,
+                supportingText = {
+                    if (input.isNotBlank() && !isValid) {
+                        Text("Enter a valid port between 0-65535")
                     }
                 }
-            }) { Text("Set") }
-        }
-    }
-}
-
-@Composable
-fun AnkiConnectPort(){
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val savedPort by APIConfs.getAnkiConnectPort(context)
-        .collectAsState(initial = 8765)
-    var input by remember { mutableStateOf("") }
-    LaunchedEffect(savedPort){
-        input = savedPort.toString()
-    }
-    Column() {
-        Text (
-            text = "Anki Connect API port ($savedPort)"
-        )
-        Row() {
-            TextField(
-                value = input,
-                onValueChange = { input = it },
-                modifier = Modifier.weight(1f)
             )
             Button(onClick = {
                 val port = input.toIntOrNull()
                 if (port != null) {
                     scope.launch {
-                        APIConfs.setAnkiConnectPort(context, port)
+                        onSave(port)
                     }
                 }
             }) { Text("Set") }
@@ -191,4 +189,37 @@ fun GreetingPreview() {
     GSMCompanionTheme {
         Greeting("AYN Thor Companion")
     }
+}
+
+fun GatewayCheck(input: String): Boolean {
+    val host = input.trim() // Remove whitespace
+    
+    if (host.isEmpty()) return false
+    if (host.length > 253) return false
+
+    if (
+        host.contains("://") ||
+        host.contains(":") ||
+        host.contains("/") ||
+        host.contains("?") ||
+        host.contains("#") ||
+        host.contains("@") ||
+        host.any { it.isWhitespace() }
+    ) return false
+
+    if (ipv4Regex.matches(host)) return true
+    if (host == "localhost") return true
+
+    val labels = host.split(".")
+    if (labels.any { it.isEmpty() }) return false
+
+    return labels.all { label ->
+        hostnameLabelRegex.matches(label)
+    }
+}
+
+fun PortCheck(input: String): Boolean {
+    val port = input.toIntOrNull()
+    if (port == null) return false
+    return port in 0..65535
 }
