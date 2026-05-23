@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
@@ -35,7 +37,6 @@ import kotlinx.coroutines.launch
 
 private val hostnameLabelRegex = Regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 private val ipv4Regex = Regex("""^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$""")
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun LandingScreen(navController: NavController){
+    var scrollState = rememberScrollState()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -65,6 +67,7 @@ fun LandingScreen(navController: NavController){
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
+                .verticalScroll(scrollState)
 
         ) {
             Greeting(

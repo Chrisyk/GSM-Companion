@@ -4,6 +4,7 @@ import android.R.attr.onClick
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
@@ -31,6 +32,11 @@ fun TextHookerScreen(navController : NavController){
             Greeting(
                 name = "AYN Thor Companion",
             )
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(100) { index ->
+                    Text("Lazy Item $index", modifier = Modifier.padding(16.dp))
+                }
+            }
         }
     }
 }
