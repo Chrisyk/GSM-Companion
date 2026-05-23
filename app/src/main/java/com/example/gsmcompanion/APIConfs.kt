@@ -16,6 +16,8 @@ object APIConfs {
     private val YOMITAN_API_PORT = intPreferencesKey("yomitan_api_port")
     private val ANKICONNECT_API_PORT = intPreferencesKey("ankiconnect_api_port")
 
+    private val GSM_UNIFIED_PORT = intPreferencesKey("gsm_unified_port")
+
     fun getDefaultGateway(context: Context): Flow<String> =
         context.dataStore.data.map { prefs ->
             prefs[DEFAULT_GATEWAY] ?: "127.0.0.1"
@@ -41,6 +43,16 @@ object APIConfs {
     suspend fun setAnkiConnectPort(context: Context, port: Int) {
         context.dataStore.edit { prefs ->
             prefs[ANKICONNECT_API_PORT] = port
+        }
+    }
+    fun getGSMUnifiedPort(context: Context): Flow<Int> =
+        context.dataStore.data.map { prefs ->
+            prefs[GSM_UNIFIED_PORT] ?: 7275
+        }
+
+    suspend fun setGSMUnifiedPort(context: Context, port: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[GSM_UNIFIED_PORT] = port
         }
     }
 }

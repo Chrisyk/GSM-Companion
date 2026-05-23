@@ -76,6 +76,8 @@ fun LandingScreen(navController: NavController){
                 .collectAsState(initial = 19633)
             val ankiConnectPort by APIConfs.getAnkiConnectPort(context)
                 .collectAsState(initial = 8765)
+            val gsmUnifiedPort by APIConfs.getGSMUnifiedPort(context)
+                .collectAsState(initial = 7275)
             ConfigPort(
                 "Yomitan",
                 yomitanPort,
@@ -85,6 +87,11 @@ fun LandingScreen(navController: NavController){
                 "AnkiConnect",
                 ankiConnectPort,
                 onSave = { port -> APIConfs.setAnkiConnectPort(context, port) },
+            )
+            ConfigPort(
+                "GSM Unified",
+                gsmUnifiedPort,
+                onSave = { port -> APIConfs.setGSMUnifiedPort(context, port) },
             )
         }
 
