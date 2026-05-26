@@ -9,8 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,19 +44,30 @@ import androidx.navigation.NavController
         Stores host and port.
      */
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TextHookerScreen(
     navController : NavController,
     viewModel: TextHookerViewModel = viewModel()
     ) {
+    val uiState by viewModel.uiState.collectAsState()
     val gsmUnifiedPort by APIConfs.getGSMUnifiedPort(LocalContext.current)
         .collectAsState(initial=7275)
     val defaultGateway by APIConfs.getDefaultGateway(LocalContext.current)
         .collectAsState(initial="127.0.0.1")
     val websocketAddress = "ws://$defaultGateway:$gsmUnifiedPort"
-    viewModel.connect(websocketAddress)
+    LaunchedEffect(websocketAddress) {
+        viewModel.connect(websocketAddress)
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    uiState.errorMessage
+                }
+            )
+        },
         bottomBar = {
             BottomAppBar { LandingScreenButton (onClick = { navController.navigate("landing")}) }
         }
@@ -66,7 +79,7 @@ fun TextHookerScreen(
                 .padding(16.dp)
 
         ) {
-            MessageList(viewModel.uiState.collectAsState().value.sentences)
+            MessageList(uiState.sentences)
         }
     }
 }
