@@ -64,7 +64,7 @@ fun TextHookerScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    uiState.errorMessage
+                    "$websocketAddress: ${viewModel.statusMessage()}"
                 }
             )
         },

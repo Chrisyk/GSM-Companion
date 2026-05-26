@@ -71,4 +71,20 @@ class TextHookerViewModel : ViewModel(){
     override fun onCleared(){
         client.close()
     }
+
+    fun statusMessage() : String {
+        if (_uiState.value.connectionStatus ==
+            ConnectionStatus.Connected) {
+            return "Connected"
+        } else if (_uiState.value.connectionStatus ==
+            ConnectionStatus.Connecting) {
+            return "Connecting"
+        } else if (_uiState.value.connectionStatus ==
+            ConnectionStatus.Disconnected) {
+            return "Disconnected"
+        } else {
+            return _uiState.value.errorMessage ?: "Error"
+        }
+    }
+
 }
