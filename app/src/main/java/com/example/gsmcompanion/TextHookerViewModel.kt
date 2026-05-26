@@ -24,13 +24,23 @@ class TextHookerViewModel : ViewModel(){
     private val _uiState =
         MutableStateFlow(TextHookerUiState())
     val uiState = _uiState.asStateFlow()
+    private var currentUrl: String? = null
+
     fun connect(url: String) {
-        if (_uiState.value.connectionStatus ==
-            ConnectionStatus.Connected) return
+        if (currentUrl == url &&
+            (_uiState.value.connectionStatus == ConnectionStatus.Connecting ||
+                _uiState.value.connectionStatus == ConnectionStatus.Connected)
+        ) return
+
+        currentUrl = url
+        client.close()
 
         _uiState.update{
-            it.copy(connectionStatus=
-                ConnectionStatus.Connecting)
+            it.copy(
+                connectionStatus=
+                    ConnectionStatus.Connecting,
+                errorMessage = null
+            )
         }
 
         client.connect(

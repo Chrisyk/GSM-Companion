@@ -1,6 +1,5 @@
 package com.example.gsmcompanion
 
-import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -51,13 +50,17 @@ fun TextHookerScreen(
     viewModel: TextHookerViewModel = viewModel()
     ) {
     val uiState by viewModel.uiState.collectAsState()
-    val gsmUnifiedPort by APIConfs.getGSMUnifiedPort(LocalContext.current)
-        .collectAsState(initial=7275)
-    val defaultGateway by APIConfs.getDefaultGateway(LocalContext.current)
-        .collectAsState(initial="127.0.0.1")
-    val websocketAddress = "ws://$defaultGateway:$gsmUnifiedPort"
+    val gsmUnifiedPort: Int? by APIConfs.getGSMUnifiedPort(LocalContext.current)
+        .collectAsState(initial = null)
+    val defaultGateway: String? by APIConfs.getDefaultGateway(LocalContext.current)
+        .collectAsState(initial = null)
+    val websocketAddress = if (defaultGateway != null && gsmUnifiedPort != null) {
+        "ws://$defaultGateway:$gsmUnifiedPort"
+    } else {
+        null
+    }
     LaunchedEffect(websocketAddress) {
-        viewModel.connect(websocketAddress)
+        websocketAddress?.let { viewModel.connect(it) }
     }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
