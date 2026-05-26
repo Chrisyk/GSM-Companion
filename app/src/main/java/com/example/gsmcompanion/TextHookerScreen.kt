@@ -1,43 +1,58 @@
 package com.example.gsmcompanion
 
+import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.util.concurrent.TimeUnit
+
+/*
+    TextHookerScreen.kt
+        Pure Compose UI.
+        Reads uiState.
+        Displays sentence list and connection status.
+
+    TextHookerViewModel.kt
+        Owns connection lifecycle.
+        Builds URL from settings.
+        Starts/stops websocket.
+        Stores received messages in StateFlow.
+
+    TexthookerClient.kt
+        Thin OkHttp wrapper.
+        Knows how to connect, receive, fail, close.
+        Does not know about Compose.
+
+    APIConfs.kt / SettingsStore.kt
+        Stores host and port.
+     */
 
 @Composable
-fun TextHookerScreen(navController : NavController){
-    val context =LocalContext.current
-    val defaultGateway = APIConfs.getDefaultGateway(context).collectAsState(
-        initial = "",
-    )
-    val gsmUnifiedPort = APIConfs.getGSMUnifiedPort(context).collectAsState(
-        initial= "",
-    )
+fun TextHookerScreen(
+    navController : NavController,
+    viewModel: TextHookerViewModel = viewModel()
+    ) {
+    val gsmUnifiedPort by APIConfs.getGSMUnifiedPort(LocalContext.current)
+        .collectAsState(initial=7275)
+    val defaultGateway by APIConfs.getDefaultGateway(LocalContext.current)
+        .collectAsState(initial="127.0.0.1")
     val websocketAddress = "ws://$defaultGateway:$gsmUnifiedPort"
-    val client = OkHttpClient.Builder()
-        .readTimeout(0, TimeUnit.MILLISECONDS) // keep the socket open indefinitely
-        .build()
-
-    val request = Request.Builder()
-        .url(websocketAddress) // echo.websocket.org is dead — use this one
-        .build()
-
-    val listener = TextHookerWebSocketClient()
-    client.newWebSocket(request, listener)
+    viewModel.connect(websocketAddress)
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -51,14 +66,32 @@ fun TextHookerScreen(navController : NavController){
                 .padding(16.dp)
 
         ) {
-            Greeting(
-                name = "AYN Thor Companion",
+            MessageList(viewModel.uiState.collectAsState().value.sentences)
+        }
+    }
+}
+
+@Composable
+fun MessageList(sentences: List<String>) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(sentences.size) {
+        if (sentences.isNotEmpty()) {
+            listState.animateScrollToItem(sentences.size -1)
+        }
+    }
+    LazyColumn (
+        state = listState,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(
+            items = sentences,
+            key = { it.hashCode() + Math.random()}
+        ) { sentence ->
+            Text(
+                text = sentence,
+                modifier = Modifier.padding(8.dp)
             )
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(100) { index ->
-                    Text("Lazy Item $index", modifier = Modifier.padding(16.dp))
-                }
-            }
+
         }
     }
 }
