@@ -27,7 +27,6 @@ class TextHookerClient(
         val request = Request.Builder()
             .url(url)
             .build()
-
         webSocket = okHttpClient.newWebSocket(
             request,
             object: WebSocketListener() {
@@ -35,6 +34,7 @@ class TextHookerClient(
                     webSocket:
                     WebSocket, response: Response
                 ) {
+                    println("WEBSOCKET onOpen")
                     onOpen()
                 }
 
@@ -43,11 +43,13 @@ class TextHookerClient(
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    println("WEBSOCKET onClosed code=$code reason=$reason")
                     this@TextHookerClient.webSocket = null
                     onClosed()
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    println("WEBSOCKET onFailure ${t.message}")
                     this@TextHookerClient.webSocket = null
                     onFailure(t)
                 }

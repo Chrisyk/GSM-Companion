@@ -31,9 +31,8 @@ class TextHookerViewModel : ViewModel(){
             (_uiState.value.connectionStatus == ConnectionStatus.Connecting ||
                 _uiState.value.connectionStatus == ConnectionStatus.Connected)
         ) return
-
-        currentUrl = url
         client.close()
+        currentUrl = url
 
         _uiState.update{
             it.copy(
@@ -46,6 +45,7 @@ class TextHookerViewModel : ViewModel(){
         client.connect(
             url = url,
             onOpen = {
+                println("VM setting Connected")
                 _uiState.update {
                     it.copy(connectionStatus=
                         ConnectionStatus.Connected)
@@ -61,12 +61,14 @@ class TextHookerViewModel : ViewModel(){
                 }
             },
             onClosed = {
+                println("VM setting Disconnected")
                 _uiState.update {
                     it.copy(connectionStatus=
                     ConnectionStatus.Disconnected)
                 }
             },
             onFailure = { error ->
+                println("VM setting Error ${error.message}")
                 _uiState.update {
                     it.copy(connectionStatus=
                     ConnectionStatus.Error,
@@ -83,17 +85,11 @@ class TextHookerViewModel : ViewModel(){
     }
 
     fun statusMessage() : String {
-        if (_uiState.value.connectionStatus ==
-            ConnectionStatus.Connected) {
-            return "Connected"
-        } else if (_uiState.value.connectionStatus ==
-            ConnectionStatus.Connecting) {
-            return "Connecting"
-        } else if (_uiState.value.connectionStatus ==
-            ConnectionStatus.Disconnected) {
-            return "Disconnected"
-        } else {
-            return _uiState.value.errorMessage ?: "Error"
+        return when (uiState.value.connectionStatus) {
+            ConnectionStatus.Connected -> "Connected"
+            ConnectionStatus.Connecting -> "Connecting"
+            ConnectionStatus.Disconnected -> "Disconnected"
+            ConnectionStatus.Error -> _uiState.value.errorMessage ?: "Error"
         }
     }
 

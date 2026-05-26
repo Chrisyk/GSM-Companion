@@ -59,6 +59,7 @@ fun TextHookerScreen(
     } else {
         null
     }
+
     val statusText = if (websocketAddress == null) {
         "Loading Settings"
     } else {
@@ -106,7 +107,6 @@ fun MessageList(sentences: List<String>) {
     ) {
         items(
             items = sentences,
-            key = { it.hashCode() + Math.random()}
         ) { sentence ->
             Text(
                 text = sentence,
