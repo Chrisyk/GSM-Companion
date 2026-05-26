@@ -59,6 +59,11 @@ fun TextHookerScreen(
     } else {
         null
     }
+    val statusText = if (websocketAddress == null) {
+        "Loading Settings"
+    } else {
+        "$websocketAddress: ${viewModel.statusMessage()}"
+    }
     LaunchedEffect(websocketAddress) {
         websocketAddress?.let { viewModel.connect(it) }
     }
@@ -67,9 +72,7 @@ fun TextHookerScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "$websocketAddress: ${viewModel.statusMessage()}"
-                    )
+                    Text(statusText)
                 }
             )
         },
