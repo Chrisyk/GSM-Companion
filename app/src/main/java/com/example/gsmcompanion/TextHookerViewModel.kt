@@ -45,7 +45,6 @@ class TextHookerViewModel : ViewModel(){
         client.connect(
             url = url,
             onOpen = {
-                println("VM setting Connected")
                 _uiState.update {
                     it.copy(connectionStatus=
                         ConnectionStatus.Connected)
@@ -61,14 +60,12 @@ class TextHookerViewModel : ViewModel(){
                 }
             },
             onClosed = {
-                println("VM setting Disconnected")
                 _uiState.update {
                     it.copy(connectionStatus=
                     ConnectionStatus.Disconnected)
                 }
             },
             onFailure = { error ->
-                println("VM setting Error ${error.message}")
                 _uiState.update {
                     it.copy(connectionStatus=
                     ConnectionStatus.Error,

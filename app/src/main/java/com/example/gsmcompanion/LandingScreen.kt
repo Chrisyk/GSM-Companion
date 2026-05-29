@@ -141,7 +141,9 @@ fun DefaultGateway(){
                     }
                 }
             )
-            Button(onClick = {
+            Button(
+                enabled = isValid,
+                onClick = {
                 if (input.isNotBlank()) {
                     scope.launch {
                         APIConfs.setDefaultGateway(context, input)
@@ -180,7 +182,9 @@ fun ConfigPort(
                     }
                 }
             )
-            Button(onClick = {
+            Button(
+                enabled = isValid,
+                onClick = {
                 val port = input.toIntOrNull()
                 if (port != null) {
                     scope.launch {
@@ -230,5 +234,5 @@ fun GatewayCheck(input: String): Boolean {
 fun PortCheck(input: String): Boolean {
     val port = input.toIntOrNull()
     if (port == null) return false
-    return port in 0..65535
+    return port in 1..65535
 }
