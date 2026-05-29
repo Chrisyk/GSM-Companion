@@ -30,10 +30,7 @@ class TextHookerClient(
         webSocket = okHttpClient.newWebSocket(
             request,
             object: WebSocketListener() {
-                override fun onOpen(
-                    webSocket:
-                    WebSocket, response: Response
-                ) {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
                     onOpen()
                 }
 
