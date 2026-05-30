@@ -50,12 +50,12 @@ fun TextHookerScreen(
     viewModel: TextHookerViewModel = viewModel()
     ) {
     val uiState by viewModel.uiState.collectAsState()
-    val gsmUnifiedPort: String? by APIConfs.getGSMUnifiedPort(LocalContext.current)
+    val gsmUnifiedPort: Int? by APIConfs.getGSMUnifiedPort(LocalContext.current)
         .collectAsState(initial = null)
     val defaultGateway: String? by APIConfs.getDefaultGateway(LocalContext.current)
         .collectAsState(initial = null)
     val websocketAddress = if (defaultGateway != null && gsmUnifiedPort != null) {
-        "ws://$defaultGateway:$gsmUnifiedPort"
+        "ws://$defaultGateway:${gsmUnifiedPort.toString()}"
     } else {
         null
     }

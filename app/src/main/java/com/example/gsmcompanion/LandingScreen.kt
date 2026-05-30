@@ -85,19 +85,19 @@ fun LandingScreen(
             )
             ConfigSettings (
                 "Yomitan",
-                state.yomitanPort,
+                state.yomitanPort.toString(),
                 onSave = { port -> viewModel.setYomitanPort(port) },
                 { input : String -> viewModel.portCheck(input) }
             )
             ConfigSettings(
                 "AnkiConnect",
-                state.ankiConnectPort,
+                state.ankiConnectPort.toString(),
                 onSave = { port -> viewModel.setAnkiConnectPort(port) },
                 { input : String -> viewModel.portCheck(input) }
             )
             ConfigSettings(
                 "GSM Unified",
-                state.gsmUnifiedPort,
+                state.gsmUnifiedPort.toString(),
                 onSave = { port : String -> viewModel.setGSMUnifiedPort(port) },
                 { input : String -> viewModel.portCheck(input) }
             )
@@ -127,14 +127,15 @@ fun ConfigSettings(
     label: String,
     savedConfig: String,
     onSave: suspend (String) -> Unit,
-    check: (String) -> Boolean
+    check: (String) -> CheckCodes
 ){
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     LaunchedEffect(savedConfig){
         input = savedConfig
     }
-    val isValid = check(input)
+    val code = check(input)
+    val isValid = code == CheckCodes.SUCCESS
     Column {
         Text (
             text = "$label: ($savedConfig)"
@@ -146,8 +147,17 @@ fun ConfigSettings(
                 modifier = Modifier.weight(1f),
                 isError = input.isNotBlank() && !isValid,
                 supportingText = {
-                    if (input.isNotBlank() && !isValid) {
-                        Text("Enter a valid port between 0-65535")
+                    if (input.isNotBlank()) {
+                        val message = when (code) {
+                            CheckCodes.SUCCESS -> ""
+                            CheckCodes.NULL_CONVERSION -> "Must be a number"
+                            CheckCodes.INVALID_RANGE -> "Port must be 1-65535"
+                            CheckCodes.EMPTY_INPUT -> "Cannot be empty"
+                            CheckCodes.INVALID_LENGTH -> "Too long"
+                            CheckCodes.INVALID_CHARACTERS -> "Invalid characters"
+                            CheckCodes.INVALID_FORMAT -> "Invalid format"
+                        }
+                        if (message.isNotEmpty()) Text(message)
                     }
                 }
             )

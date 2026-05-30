@@ -9,10 +9,20 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 data class LandingUiState(
     val defaultGateway: String = "127.0.0.1",
-    val gsmUnifiedPort: String = "7275",
-    var yomitanPort: String = "19633",
-    var ankiConnectPort: String = "8765"
+    val gsmUnifiedPort: Int = 7275,
+    val yomitanPort: Int = 19633,
+    val ankiConnectPort: Int = 8765
 )
+
+enum class CheckCodes {
+    SUCCESS,
+    NULL_CONVERSION,
+    INVALID_RANGE,
+    EMPTY_INPUT,
+    INVALID_LENGTH,
+    INVALID_CHARACTERS,
+    INVALID_FORMAT
+}
 
 class LandingViewModel(application: Application) : AndroidViewModel(application) {
     private val hostnameLabelRegex = Regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
@@ -22,8 +32,12 @@ class LandingViewModel(application: Application) : AndroidViewModel(application)
         APIConfs.getGSMUnifiedPort(application),
         APIConfs.getYomitanPort(application),
         APIConfs.getAnkiConnectPort(application),
-    ) { gateway, yomitan, anki, gsm ->
-        LandingUiState(gateway, yomitan, anki, gsm)
+    ) { defaultGateway, gsmUnifiedPort, yomitanPort, ankiConnectPort ->
+        LandingUiState(
+            defaultGateway = defaultGateway,
+            gsmUnifiedPort = gsmUnifiedPort,
+            yomitanPort = yomitanPort,
+            ankiConnectPort = ankiConnectPort)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -35,22 +49,25 @@ class LandingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     suspend fun setGSMUnifiedPort(port : String) {
-        APIConfs.setGSMUnifiedPort(getApplication(), port)
+        val portInt = port.toInt()
+        APIConfs.setGSMUnifiedPort(getApplication(), portInt)
     }
 
     suspend fun setYomitanPort(port: String) {
-        APIConfs.setYomitanPort(getApplication(), port)
+        val portInt = port.toInt()
+        APIConfs.setYomitanPort(getApplication(), portInt)
     }
 
     suspend fun setAnkiConnectPort(port: String) {
-        APIConfs.setAnkiConnectPort(getApplication(), port)
+        val portInt = port.toInt()
+        APIConfs.setAnkiConnectPort(getApplication(), portInt)
     }
 
-    fun gatewayCheck(input: String): Boolean {
+    fun gatewayCheck(input: String): CheckCodes {
         val host = input.trim() // Remove whitespace
 
-        if (host.isEmpty()) return false
-        if (host.length > 253) return false
+        if (host.isEmpty()) return CheckCodes.EMPTY_INPUT
+        if (host.length > 253) return CheckCodes.INVALID_LENGTH
 
         if (
             host.contains("://") ||
@@ -60,22 +77,26 @@ class LandingViewModel(application: Application) : AndroidViewModel(application)
             host.contains("#") ||
             host.contains("@") ||
             host.any { it.isWhitespace() }
-        ) return false
+        ) return CheckCodes.INVALID_CHARACTERS
 
-        if (ipv4Regex.matches(host)) return true
-        if (host == "localhost") return true
+        if (ipv4Regex.matches(host)) return CheckCodes.SUCCESS
+        if (host == "localhost") return CheckCodes.SUCCESS
 
         val labels = host.split(".")
-        if (labels.any { it.isEmpty() }) return false
+        if (labels.any { it.isEmpty() }) return CheckCodes.INVALID_FORMAT
 
-        return labels.all { label ->
-            hostnameLabelRegex.matches(label)
-        }
+        return if (labels.all { label -> hostnameLabelRegex.matches(label) })
+            CheckCodes.SUCCESS
+        else
+            CheckCodes.INVALID_FORMAT
     }
 
-    fun portCheck(input: String): Boolean {
-        val port = input.toIntOrNull() ?: return false
-        return port in 1..65535
+    fun portCheck(input: String): CheckCodes {
+        val port = input.toIntOrNull() ?: return CheckCodes.NULL_CONVERSION
+        if (port in 1..65535)
+            return CheckCodes.SUCCESS
+        else
+            return CheckCodes.INVALID_RANGE
     }
 
 }
