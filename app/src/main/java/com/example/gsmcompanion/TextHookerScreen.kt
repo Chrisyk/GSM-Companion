@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,13 +61,25 @@ fun TextHookerScreen(
         null
     }
 
+    val statusMessage = when (uiState.connectionStatus) {
+        ConnectionStatus.Connected -> "Connected"
+        ConnectionStatus.Connecting -> "Connecting"
+        ConnectionStatus.Disconnected -> "Disconnected"
+        ConnectionStatus.Error -> uiState.errorMessage ?: "Error"
+    }
+
     val statusText = if (websocketAddress == null) {
         "Loading Settings"
     } else {
-        "$websocketAddress: ${viewModel.statusMessage()}"
+        "$websocketAddress: $statusMessage"
     }
-    LaunchedEffect(websocketAddress) {
-        websocketAddress?.let { viewModel.connect(it) }
+    DisposableEffect(websocketAddress) {
+        if (websocketAddress != null) {
+            viewModel.connect(websocketAddress)
+        }
+        onDispose {
+            viewModel.disconnect()
+        }
     }
     Scaffold(
         modifier = Modifier.fillMaxSize(),

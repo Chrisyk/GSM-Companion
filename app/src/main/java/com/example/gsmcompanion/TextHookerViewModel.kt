@@ -77,17 +77,20 @@ class TextHookerViewModel : ViewModel(){
         )
     }
 
-    override fun onCleared(){
+    fun disconnect() {
+        currentUrl = null
         client.close()
+
+        _uiState.update {
+            it.copy(
+                connectionStatus = ConnectionStatus.Disconnected,
+                errorMessage = null
+            )
+        }
     }
 
-    fun statusMessage() : String {
-        return when (uiState.value.connectionStatus) {
-            ConnectionStatus.Connected -> "Connected"
-            ConnectionStatus.Connecting -> "Connecting"
-            ConnectionStatus.Disconnected -> "Disconnected"
-            ConnectionStatus.Error -> _uiState.value.errorMessage ?: "Error"
-        }
+    override fun onCleared(){
+        disconnect()
     }
 
 }
