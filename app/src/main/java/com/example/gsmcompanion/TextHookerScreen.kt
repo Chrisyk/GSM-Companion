@@ -50,7 +50,7 @@ fun TextHookerScreen(
     viewModel: TextHookerViewModel = viewModel()
     ) {
     val uiState by viewModel.uiState.collectAsState()
-    val gsmUnifiedPort: Int? by APIConfs.getGSMUnifiedPort(LocalContext.current)
+    val gsmUnifiedPort: String? by APIConfs.getGSMUnifiedPort(LocalContext.current)
         .collectAsState(initial = null)
     val defaultGateway: String? by APIConfs.getDefaultGateway(LocalContext.current)
         .collectAsState(initial = null)

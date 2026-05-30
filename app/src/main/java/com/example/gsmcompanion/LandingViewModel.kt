@@ -1,7 +1,7 @@
 package com.example.gsmcompanion
 
-import android.content.Context
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -9,19 +9,19 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 data class LandingUiState(
     val defaultGateway: String = "127.0.0.1",
-    val gsmUnifiedPort: Int = 7275,
-    var yomitanPort: Int = 19633,
-    var ankiConnectPort: Int = 8765
+    val gsmUnifiedPort: String = "7275",
+    var yomitanPort: String = "19633",
+    var ankiConnectPort: String = "8765"
 )
 
-class LandingViewModel(context: Context) : ViewModel() {
+class LandingViewModel(application: Application) : AndroidViewModel(application) {
     private val hostnameLabelRegex = Regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
     private val ipv4Regex = Regex("""^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$""")
     val settingsState: StateFlow<LandingUiState> = combine(
-        APIConfs.getDefaultGateway(context),
-        APIConfs.getGSMUnifiedPort(context),
-        APIConfs.getYomitanPort(context),
-        APIConfs.getAnkiConnectPort(context),
+        APIConfs.getDefaultGateway(application),
+        APIConfs.getGSMUnifiedPort(application),
+        APIConfs.getYomitanPort(application),
+        APIConfs.getAnkiConnectPort(application),
     ) { gateway, yomitan, anki, gsm ->
         LandingUiState(gateway, yomitan, anki, gsm)
     }.stateIn(
@@ -30,7 +30,23 @@ class LandingViewModel(context: Context) : ViewModel() {
         initialValue = LandingUiState()
     )
 
-    fun GatewayCheck(input: String): Boolean {
+    suspend fun setDefaultGateway(ip: String) {
+        APIConfs.setDefaultGateway(getApplication(), ip)
+    }
+
+    suspend fun setGSMUnifiedPort(port : String) {
+        APIConfs.setGSMUnifiedPort(getApplication(), port)
+    }
+
+    suspend fun setYomitanPort(port: String) {
+        APIConfs.setYomitanPort(getApplication(), port)
+    }
+
+    suspend fun setAnkiConnectPort(port: String) {
+        APIConfs.setAnkiConnectPort(getApplication(), port)
+    }
+
+    fun gatewayCheck(input: String): Boolean {
         val host = input.trim() // Remove whitespace
 
         if (host.isEmpty()) return false
@@ -57,9 +73,8 @@ class LandingViewModel(context: Context) : ViewModel() {
         }
     }
 
-    fun PortCheck(input: String): Boolean {
-        val port = input.toIntOrNull()
-        if (port == null) return false
+    fun portCheck(input: String): Boolean {
+        val port = input.toIntOrNull() ?: return false
         return port in 1..65535
     }
 

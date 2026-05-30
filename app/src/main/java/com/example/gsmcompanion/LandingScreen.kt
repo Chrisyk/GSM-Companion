@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -60,6 +59,7 @@ fun LandingScreen(
 ){
     val state by viewModel.settingsState.collectAsState()
     val scrollState = rememberScrollState()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -77,22 +77,29 @@ fun LandingScreen(
             Greeting(
                 name = "AYN Thor Companion",
             )
-            DefaultGateway(state.defaultGateway)
-            val context = LocalContext.current
-            ConfigPort(
+            ConfigSettings(
+                "Default Gateway",
+                state.defaultGateway,
+                onSave = { gateway -> viewModel.setDefaultGateway(gateway) },
+                { input : String -> viewModel.gatewayCheck(input) }
+            )
+            ConfigSettings (
                 "Yomitan",
                 state.yomitanPort,
-                onSave = { port -> APIConfs.setYomitanPort(context, port) },
+                onSave = { port -> viewModel.setYomitanPort(port) },
+                { input : String -> viewModel.portCheck(input) }
             )
-            ConfigPort(
+            ConfigSettings(
                 "AnkiConnect",
                 state.ankiConnectPort,
-                onSave = { port -> APIConfs.setAnkiConnectPort(context, port) },
+                onSave = { port -> viewModel.setAnkiConnectPort(port) },
+                { input : String -> viewModel.portCheck(input) }
             )
-            ConfigPort(
+            ConfigSettings(
                 "GSM Unified",
                 state.gsmUnifiedPort,
-                onSave = { port -> APIConfs.setGSMUnifiedPort(context, port) },
+                onSave = { port : String -> viewModel.setGSMUnifiedPort(port) },
+                { input : String -> viewModel.portCheck(input) }
             )
         }
 
@@ -107,70 +114,32 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
     )
 }
 
+@Preview(showBackground = true)
 @Composable
-fun TextHookerPageButton(onClick: () -> Unit) {
-    Button(onClick = onClick) { Text("Text Hooker") }
-}
-
-@Composable
-fun DefaultGateway(
-    savedIp: String,
-    viewModel: LandingViewModel = viewModel()
-){
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var input by remember { mutableStateOf("") }
-    LaunchedEffect(savedIp){
-        input = savedIp
-    }
-    val isValid = viewModel.GatewayCheck(input)
-    Column() {
-        Text (
-            text = "Tailscale/Default Gateway IP ($savedIp)"
-        )
-        Row() {
-            TextField(
-                value = input,
-                onValueChange = { input = it },
-                modifier = Modifier.weight(1f),
-                isError = input.isNotBlank() && !isValid,
-                supportingText = {
-                    if (input.isNotBlank() && !isValid) {
-                        Text("Enter hostname/IP only, no scheme, port, or path")
-                    }
-                }
-            )
-            Button(
-                enabled = isValid,
-                onClick = {
-                if (input.isNotBlank()) {
-                    scope.launch {
-                        APIConfs.setDefaultGateway(context, input)
-                    }
-                }
-            }) { Text("Set") }
-        }
+fun GreetingPreview() {
+    GSMCompanionTheme {
+        Greeting("AYN Thor Companion")
     }
 }
 
 @Composable
-fun ConfigPort(
+fun ConfigSettings(
     label: String,
-    savedPort: Int,
-    onSave: suspend (Int) -> Unit,
-    viewModel: LandingViewModel = viewModel()
+    savedConfig: String,
+    onSave: suspend (String) -> Unit,
+    check: (String) -> Boolean
 ){
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
-    LaunchedEffect(savedPort){
-        input = savedPort.toString()
+    LaunchedEffect(savedConfig){
+        input = savedConfig
     }
-    val isValid = viewModel.PortCheck(input)
-    Column() {
+    val isValid = check(input)
+    Column {
         Text (
-            text = "$label API port ($savedPort)"
+            text = "$label: ($savedConfig)"
         )
-        Row() {
+        Row {
             TextField(
                 value = input,
                 onValueChange = { input = it },
@@ -185,21 +154,15 @@ fun ConfigPort(
             Button(
                 enabled = isValid,
                 onClick = {
-                val port = input.toIntOrNull()
-                if (port != null) {
                     scope.launch {
-                        onSave(port)
+                        onSave(input)
                     }
-                }
             }) { Text("Set") }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    GSMCompanionTheme {
-        Greeting("AYN Thor Companion")
-    }
+fun TextHookerPageButton(onClick: () -> Unit) {
+    Button(onClick = onClick) { Text("Text Hooker") }
 }
