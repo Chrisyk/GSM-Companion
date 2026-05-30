@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -35,9 +36,8 @@ import androidx.navigation.compose.rememberNavController
 
 import kotlinx.coroutines.launch
 
-private val hostnameLabelRegex = Regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
-private val ipv4Regex = Regex("""^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$""")
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,7 +54,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun LandingScreen(navController: NavController){
+fun LandingScreen(
+    navController: NavController,
+    viewModel: LandingViewModel = viewModel()
+){
+    val state by viewModel.settingsState.collectAsState()
     val scrollState = rememberScrollState()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -73,27 +77,21 @@ fun LandingScreen(navController: NavController){
             Greeting(
                 name = "AYN Thor Companion",
             )
-            DefaultGateway()
+            DefaultGateway(state.defaultGateway)
             val context = LocalContext.current
-            val yomitanPort by APIConfs.getYomitanPort(context)
-                .collectAsState(initial = 19633)
-            val ankiConnectPort by APIConfs.getAnkiConnectPort(context)
-                .collectAsState(initial = 8765)
-            val gsmUnifiedPort by APIConfs.getGSMUnifiedPort(context)
-                .collectAsState(initial = 7275)
             ConfigPort(
                 "Yomitan",
-                yomitanPort,
+                state.yomitanPort,
                 onSave = { port -> APIConfs.setYomitanPort(context, port) },
             )
             ConfigPort(
                 "AnkiConnect",
-                ankiConnectPort,
+                state.ankiConnectPort,
                 onSave = { port -> APIConfs.setAnkiConnectPort(context, port) },
             )
             ConfigPort(
                 "GSM Unified",
-                gsmUnifiedPort,
+                state.gsmUnifiedPort,
                 onSave = { port -> APIConfs.setGSMUnifiedPort(context, port) },
             )
         }
@@ -115,19 +113,20 @@ fun TextHookerPageButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun DefaultGateway(){
+fun DefaultGateway(
+    savedIp: String,
+    viewModel: LandingViewModel = viewModel()
+){
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val savedIP by APIConfs.getDefaultGateway(context)
-        .collectAsState(initial = "127.0.0.1")
     var input by remember { mutableStateOf("") }
-    LaunchedEffect(savedIP){
-        input = savedIP
+    LaunchedEffect(savedIp){
+        input = savedIp
     }
-    val isValid = GatewayCheck(input)
+    val isValid = viewModel.GatewayCheck(input)
     Column() {
         Text (
-            text = "Tailscale/Default Gateway IP ($savedIP)"
+            text = "Tailscale/Default Gateway IP ($savedIp)"
         )
         Row() {
             TextField(
@@ -158,14 +157,15 @@ fun DefaultGateway(){
 fun ConfigPort(
     label: String,
     savedPort: Int,
-    onSave: suspend (Int) -> Unit
+    onSave: suspend (Int) -> Unit,
+    viewModel: LandingViewModel = viewModel()
 ){
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     LaunchedEffect(savedPort){
         input = savedPort.toString()
     }
-    val isValid = PortCheck(input)
+    val isValid = viewModel.PortCheck(input)
     Column() {
         Text (
             text = "$label API port ($savedPort)"
@@ -202,37 +202,4 @@ fun GreetingPreview() {
     GSMCompanionTheme {
         Greeting("AYN Thor Companion")
     }
-}
-
-fun GatewayCheck(input: String): Boolean {
-    val host = input.trim() // Remove whitespace
-    
-    if (host.isEmpty()) return false
-    if (host.length > 253) return false
-
-    if (
-        host.contains("://") ||
-        host.contains(":") ||
-        host.contains("/") ||
-        host.contains("?") ||
-        host.contains("#") ||
-        host.contains("@") ||
-        host.any { it.isWhitespace() }
-    ) return false
-
-    if (ipv4Regex.matches(host)) return true
-    if (host == "localhost") return true
-
-    val labels = host.split(".")
-    if (labels.any { it.isEmpty() }) return false
-
-    return labels.all { label ->
-        hostnameLabelRegex.matches(label)
-    }
-}
-
-fun PortCheck(input: String): Boolean {
-    val port = input.toIntOrNull()
-    if (port == null) return false
-    return port in 1..65535
 }
