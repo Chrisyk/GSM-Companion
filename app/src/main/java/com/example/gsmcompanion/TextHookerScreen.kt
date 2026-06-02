@@ -91,7 +91,7 @@ fun TextHookerScreen(
             )
         },
         bottomBar = {
-            BottomAppBar { LandingScreenButton (onClick = { navController.navigate("landing")}) }
+            BottomBar(navController)
         }
 
     ) { innerPadding ->
@@ -130,7 +130,3 @@ fun MessageList(sentences: List<String>) {
     }
 }
 
-@Composable
-fun LandingScreenButton(onClick: () -> Unit) {
-    Button(onClick = onClick) { Text("Settings") }
-}

@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController, startDestination = "landing") {
                     composable("landing") { LandingScreen(navController) }
                     composable("textHooker") { TextHookerScreen(navController) }
+                    composable("healthCheck") { HealthCheckScreen(navController) }
                 }
             }
         }
@@ -63,7 +64,7 @@ fun LandingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            BottomAppBar { TextHookerPageButton(onClick = { navController.navigate("textHooker") }) }
+            BottomBar(navController)
         }
 
     ) { innerPadding ->
@@ -173,6 +174,25 @@ fun ConfigSettings(
 }
 
 @Composable
+fun BottomBar(navController: NavController){
+    BottomAppBar {
+        TextHookerPageButton{ navController.navigate("textHooker") }
+        HealthCheckPageButton { navController.navigate("healthCheck") }
+        LandingScreenButton { navController.navigate("landing") }
+    }
+}
+
+@Composable
 fun TextHookerPageButton(onClick: () -> Unit) {
     Button(onClick = onClick) { Text("Text Hooker") }
+}
+
+@Composable
+fun HealthCheckPageButton(onClick: () -> Unit) {
+    Button(onClick = onClick) { Text ("Health Check") }
+}
+
+@Composable
+fun LandingScreenButton(onClick: () -> Unit) {
+    Button(onClick = onClick) { Text("Settings") }
 }
