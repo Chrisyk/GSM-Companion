@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 class TextHookerClient(
     private val okHttpClient: OkHttpClient =
         OkHttpClient.Builder()
+            .pingInterval(2000, TimeUnit.MILLISECONDS)
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .build()
 ) {
@@ -55,4 +56,5 @@ class TextHookerClient(
         webSocket?.close(1000, "Closing texthooker websocket")
         webSocket = null
     }
+
 }

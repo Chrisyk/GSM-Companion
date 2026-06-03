@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +18,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import kotlin.time.Duration.Companion.milliseconds
 
 class HealthCheckViewModel(application: Application) : AndroidViewModel(application) {
     private val client = OkHttpClient()
@@ -36,13 +39,14 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
         pingJob = viewModelScope.launch(Dispatchers.IO) {
             configs.collectLatest { config ->
                 while (isActive) {
-                    PortName.entries.forEach { name ->
-                        val url = APIConfs.getURL(config, name)
-                        launch {
+                    val tasks = PortName.entries.map { name ->
+                        async {
+                            val url = APIConfs.getURL(config, name)
                             checkHealthStatus(url, name)
                         }
                     }
-                    delay(2000L)
+                    tasks.awaitAll()
+                    delay(2000L.milliseconds)
                 }
             }
         }
@@ -52,7 +56,6 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
         pingJob?.cancel()
         pingJob = null
     }
-
 
     fun checkHealthStatus(url: String, key : PortName) {
         try {
@@ -91,6 +94,5 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
     }
-
 
 }

@@ -14,9 +14,9 @@ data class TextHookerUiState(
 
 class TextHookerViewModel : ViewModel(){
     private val client = TextHookerClient()
-    private val _uiState =
-        MutableStateFlow(TextHookerUiState())
+    private val _uiState = MutableStateFlow(TextHookerUiState())
     val uiState = _uiState.asStateFlow()
+    private var connectionAttemptId = 0
     private var currentUrl: String? = null
 
     fun connect(url: String) {
@@ -24,6 +24,8 @@ class TextHookerViewModel : ViewModel(){
             (_uiState.value.connectionStatus == ConnectionStatus.Connecting ||
                 _uiState.value.connectionStatus == ConnectionStatus.Connected)
         ) return
+
+        val attemptId = ++connectionAttemptId
         client.close()
         currentUrl = url
 
@@ -34,43 +36,57 @@ class TextHookerViewModel : ViewModel(){
                 errorMessage = null
             )
         }
-
         client.connect(
             url = url,
             onOpen = {
-                _uiState.update {
-                    it.copy(connectionStatus=
-                        ConnectionStatus.Connected)
+                if (attemptId == connectionAttemptId) {
+                    _uiState.update {
+                        it.copy(
+                            connectionStatus =
+                                ConnectionStatus.Connected
+                        )
 
+                    }
                 }
             },
             onMessage = { message ->
-                _uiState.update { state ->
-                    state.copy(
-                        sentences=
-                            (state.sentences + message).takeLast(300)
-                    )
+                if (attemptId == connectionAttemptId) {
+                    _uiState.update { state ->
+                        state.copy(
+                            sentences =
+                                (state.sentences + message).takeLast(300)
+                        )
+                    }
                 }
             },
             onClosed = {
-                _uiState.update {
-                    it.copy(connectionStatus=
-                    ConnectionStatus.Disconnected)
+                if (attemptId == connectionAttemptId) {
+                    _uiState.update {
+                        it.copy(
+                            connectionStatus =
+                                ConnectionStatus.Disconnected
+                        )
+                    }
                 }
             },
             onFailure = { error ->
-                _uiState.update {
-                    it.copy(connectionStatus=
-                    ConnectionStatus.Error,
-                        errorMessage=
-                    error.message
-                    )
+                if (attemptId == connectionAttemptId) {
+                    _uiState.update {
+                        it.copy(
+                            connectionStatus =
+                                ConnectionStatus.Error,
+                            errorMessage =
+                                error.message
+                        )
+                    }
                 }
             }
         )
     }
 
     fun disconnect() {
+        connectionAttemptId++
+
         currentUrl = null
         client.close()
 
