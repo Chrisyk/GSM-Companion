@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlin.time.Duration.Companion.milliseconds
@@ -45,7 +46,9 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
                             checkHealthStatus(url, name)
                         }
                     }
-                    tasks.awaitAll()
+                    withTimeoutOrNull(5000L.milliseconds) {
+                        tasks.awaitAll()
+                    }
                     delay(2000L.milliseconds)
                 }
             }
