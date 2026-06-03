@@ -59,6 +59,7 @@ fun LandingScreen(
     viewModel: LandingViewModel = viewModel()
 ){
     val state by viewModel.settingsState.collectAsState()
+
     val scrollState = rememberScrollState()
 
     Scaffold(
@@ -86,13 +87,13 @@ fun LandingScreen(
             )
             ConfigSettings (
                 "Yomitan",
-                state.yomitanPort.toString(),
+                state.yomitanApiPort.toString(),
                 onSave = { port -> viewModel.setYomitanPort(port) },
                 { input : String -> viewModel.portCheck(input) }
             )
             ConfigSettings(
                 "AnkiConnect",
-                state.ankiConnectPort.toString(),
+                state.ankiConnectApiPort.toString(),
                 onSave = { port -> viewModel.setAnkiConnectPort(port) },
                 { input : String -> viewModel.portCheck(input) }
             )

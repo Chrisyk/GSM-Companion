@@ -5,14 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-data class LandingUiState(
-    val defaultGateway: String = "127.0.0.1",
-    val gsmUnifiedPort: Int = 7275,
-    val yomitanPort: Int = 19633,
-    val ankiConnectPort: Int = 8765
-)
 
 enum class CheckCodes {
     SUCCESS,
@@ -27,42 +20,27 @@ enum class CheckCodes {
 class LandingViewModel(application: Application) : AndroidViewModel(application) {
     private val hostnameLabelRegex = Regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
     private val ipv4Regex = Regex("""^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$""")
-    val settingsState: StateFlow<LandingUiState> = combine(
-        APIConfs.getDefaultGateway(application),
-        APIConfs.getGSMUnifiedPort(application),
-        APIConfs.getYomitanPort(application),
-        APIConfs.getAnkiConnectPort(application),
-    ) { defaultGateway, gsmUnifiedPort, yomitanPort, ankiConnectPort ->
-        LandingUiState(
-            defaultGateway = defaultGateway,
-            gsmUnifiedPort = gsmUnifiedPort,
-            yomitanPort = yomitanPort,
-            ankiConnectPort = ankiConnectPort)
-    }.stateIn(
+    val settingsState: StateFlow<Configs> = APIConfs.getConfigs(application)
+    .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = LandingUiState()
+        initialValue = Configs()
     )
-
     suspend fun setDefaultGateway(ip: String) {
         APIConfs.setDefaultGateway(getApplication(), ip)
     }
-
     suspend fun setGSMUnifiedPort(port : String) {
         val portInt = port.toInt()
         APIConfs.setGSMUnifiedPort(getApplication(), portInt)
     }
-
     suspend fun setYomitanPort(port: String) {
         val portInt = port.toInt()
         APIConfs.setYomitanPort(getApplication(), portInt)
     }
-
     suspend fun setAnkiConnectPort(port: String) {
         val portInt = port.toInt()
         APIConfs.setAnkiConnectPort(getApplication(), portInt)
     }
-
     fun gatewayCheck(input: String): CheckCodes {
         val host = input.trim() // Remove whitespace
 
@@ -90,7 +68,6 @@ class LandingViewModel(application: Application) : AndroidViewModel(application)
         else
             CheckCodes.INVALID_FORMAT
     }
-
     fun portCheck(input: String): CheckCodes {
         val port = input.toIntOrNull() ?: return CheckCodes.NULL_CONVERSION
         if (port in 1..65535)
@@ -98,5 +75,4 @@ class LandingViewModel(application: Application) : AndroidViewModel(application)
         else
             return CheckCodes.INVALID_RANGE
     }
-
 }

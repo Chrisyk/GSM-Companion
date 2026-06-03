@@ -9,6 +9,7 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -24,6 +25,12 @@ fun HealthCheckScreen(
     // What exactly is the by keyword and why does '=' not work here?
     val state by viewModel.portHealthStatuses.collectAsState()
     val scrollState = rememberScrollState()
+    DisposableEffect(Unit) {
+        viewModel.startPinging()
+        onDispose {
+            viewModel.stopPinging()
+        }
+    }
     Scaffold(
         Modifier.fillMaxSize(),
         bottomBar = {

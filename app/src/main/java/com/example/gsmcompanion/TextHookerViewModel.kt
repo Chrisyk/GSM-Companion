@@ -5,13 +5,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-enum class ConnectionStatus {
-    Disconnected,
-    Connecting,
-    Connected,
-    Error,
-}
-
 data class TextHookerUiState(
     val connectionStatus : ConnectionStatus =
         ConnectionStatus.Disconnected,

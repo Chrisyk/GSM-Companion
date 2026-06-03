@@ -23,27 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 
-/*
-    TextHookerScreen.kt
-        Pure Compose UI.
-        Reads uiState.
-        Displays sentence list and connection status.
-
-    TextHookerViewModel.kt
-        Owns connection lifecycle.
-        Builds URL from settings.
-        Starts/stops websocket.
-        Stores received messages in StateFlow.
-
-    TexthookerClient.kt
-        Thin OkHttp wrapper.
-        Knows how to connect, receive, fail, close.
-        Does not know about Compose.
-
-    APIConfs.kt / SettingsStore.kt
-        Stores host and port.
-     */
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TextHookerScreen(
@@ -51,15 +30,11 @@ fun TextHookerScreen(
     viewModel: TextHookerViewModel = viewModel()
     ) {
     val uiState by viewModel.uiState.collectAsState()
-    val gsmUnifiedPort: Int? by APIConfs.getGSMUnifiedPort(LocalContext.current)
-        .collectAsState(initial = null)
-    val defaultGateway: String? by APIConfs.getDefaultGateway(LocalContext.current)
-        .collectAsState(initial = null)
-    val websocketAddress = if (defaultGateway != null && gsmUnifiedPort != null) {
-        "ws://$defaultGateway:${gsmUnifiedPort.toString()}"
-    } else {
-        null
-    }
+    val context = LocalContext.current
+    val config by APIConfs.getConfigs(context).collectAsState(
+        initial = Configs()
+    )
+    val websocketAddress = APIConfs.getURL(config, PortName.GSM, "ws")
 
     val statusMessage = when (uiState.connectionStatus) {
         ConnectionStatus.Connected -> "Connected"
@@ -68,15 +43,9 @@ fun TextHookerScreen(
         ConnectionStatus.Error -> uiState.errorMessage ?: "Error"
     }
 
-    val statusText = if (websocketAddress == null) {
-        "Loading Settings"
-    } else {
-        "$websocketAddress: $statusMessage"
-    }
+    val statusText = "$websocketAddress: $statusMessage"
     DisposableEffect(websocketAddress) {
-        if (websocketAddress != null) {
-            viewModel.connect(websocketAddress)
-        }
+        viewModel.connect(websocketAddress)
         onDispose {
             viewModel.disconnect()
         }
