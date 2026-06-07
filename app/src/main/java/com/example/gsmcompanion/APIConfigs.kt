@@ -41,7 +41,7 @@ data class PortHealthStatuses (
         ConnectionStatus.Disconnected,
 )
 
-object APIConfs {
+object APIConfigs {
     private val DEFAULT_GATEWAY = stringPreferencesKey("default_gateway")
     private val YOMITAN_API_PORT = intPreferencesKey("yomitan_api_port")
     private val ANKICONNECT_API_PORT = intPreferencesKey("ankiconnect_api_port")

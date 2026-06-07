@@ -27,7 +27,7 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
         MutableStateFlow(PortHealthStatuses())
     val portHealthStatuses = _portHealthStatuses.asStateFlow()
 
-    val configs = APIConfs.getConfigs(application).stateIn(
+    val configs = APIConfigs.getConfigs(application).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000L),
         initialValue = Configs()
@@ -42,7 +42,7 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
                 while (isActive) {
                     val tasks = PortName.entries.map { name ->
                         async {
-                            val url = APIConfs.getURL(config, name)
+                            val url = APIConfigs.getURL(config, name)
                             checkHealthStatus(url, name)
                         }
                     }

@@ -20,26 +20,26 @@ enum class CheckCodes {
 class LandingViewModel(application: Application) : AndroidViewModel(application) {
     private val hostnameLabelRegex = Regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
     private val ipv4Regex = Regex("""^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$""")
-    val settingsState: StateFlow<Configs> = APIConfs.getConfigs(application)
+    val settingsState: StateFlow<Configs> = APIConfigs.getConfigs(application)
     .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = Configs()
     )
     suspend fun setDefaultGateway(ip: String) {
-        APIConfs.setDefaultGateway(getApplication(), ip)
+        APIConfigs.setDefaultGateway(getApplication(), ip)
     }
     suspend fun setGSMUnifiedPort(port : String) {
         val portInt = port.toInt()
-        APIConfs.setGSMUnifiedPort(getApplication(), portInt)
+        APIConfigs.setGSMUnifiedPort(getApplication(), portInt)
     }
     suspend fun setYomitanPort(port: String) {
         val portInt = port.toInt()
-        APIConfs.setYomitanPort(getApplication(), portInt)
+        APIConfigs.setYomitanPort(getApplication(), portInt)
     }
     suspend fun setAnkiConnectPort(port: String) {
         val portInt = port.toInt()
-        APIConfs.setAnkiConnectPort(getApplication(), portInt)
+        APIConfigs.setAnkiConnectPort(getApplication(), portInt)
     }
     fun gatewayCheck(input: String): CheckCodes {
         val host = input.trim() // Remove whitespace

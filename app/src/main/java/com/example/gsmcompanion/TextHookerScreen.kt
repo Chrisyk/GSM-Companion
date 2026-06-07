@@ -31,10 +31,10 @@ fun TextHookerScreen(
     ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val config by APIConfs.getConfigs(context).collectAsState(
+    val config by APIConfigs.getConfigs(context).collectAsState(
         initial = Configs()
     )
-    val websocketAddress = APIConfs.getURL(config, PortName.GSM, "ws")
+    val websocketAddress = APIConfigs.getURL(config, PortName.GSM, "ws")
 
     val statusMessage = when (uiState.connectionStatus) {
         ConnectionStatus.Connected -> "Connected"

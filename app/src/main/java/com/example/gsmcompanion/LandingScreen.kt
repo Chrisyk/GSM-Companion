@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
                     composable("landing") { LandingScreen(navController) }
                     composable("textHooker") { TextHookerScreen(navController) }
                     composable("healthCheck") { HealthCheckScreen(navController) }
+                    composable("ankiConfigs") { AnkiConfigsScreen(navController)}
                 }
             }
         }
@@ -177,23 +178,14 @@ fun ConfigSettings(
 @Composable
 fun BottomBar(navController: NavController){
     BottomAppBar {
-        TextHookerPageButton{ navController.navigate("textHooker") }
-        HealthCheckPageButton { navController.navigate("healthCheck") }
-        LandingScreenButton { navController.navigate("landing") }
+        NavigateButton("Text Hooker"){ navController.navigate("textHooker") }
+        NavigateButton("Health Check") { navController.navigate("healthCheck") }
+        NavigateButton("Port Settings") { navController.navigate("landing") }
+        NavigateButton("Anki Settings") {navController.navigate("ankiConfigs")}
     }
 }
 
 @Composable
-fun TextHookerPageButton(onClick: () -> Unit) {
-    Button(onClick = onClick) { Text("Text Hooker") }
-}
-
-@Composable
-fun HealthCheckPageButton(onClick: () -> Unit) {
-    Button(onClick = onClick) { Text ("Health Check") }
-}
-
-@Composable
-fun LandingScreenButton(onClick: () -> Unit) {
-    Button(onClick = onClick) { Text("Settings") }
+fun NavigateButton(label: String, onClick: () -> Unit) {
+    Button(onClick = onClick) { Text(label) }
 }
