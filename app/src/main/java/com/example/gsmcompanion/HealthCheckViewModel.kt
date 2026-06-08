@@ -67,7 +67,7 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
                 .build()
             client.newCall(request).execute().use { response ->
                 updateStatus(
-                    key, if (response.code == 200) ConnectionStatus.Connected else
+                    key, if (response.code == 200 || (key == PortName.Yomitan && response.code == 405)) ConnectionStatus.Connected else
                         ConnectionStatus.Disconnected
                 )
             }
