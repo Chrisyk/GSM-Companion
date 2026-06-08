@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -25,9 +27,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
 
 @Composable
 fun AnkiConfigsScreen(
@@ -36,9 +43,17 @@ fun AnkiConfigsScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
-
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         viewModel.getModelNames()
+    }
+
+    LaunchedEffect(uiState.selectedModel) {
+        val selectedModel = uiState.selectedModel
+        if (selectedModel != null) {
+            viewModel.getFieldNames(selectedModel)
+        }
     }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -62,33 +77,70 @@ fun AnkiConfigsScreen(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    uiState.selectedModel?.let { selectedModel ->
-                        Text("Selected model: $selectedModel")
-                    }
+                    val selectedModel = uiState.selectedModel
+                    Text("Selected model: ${selectedModel ?: "None"}")
+
+                }
+
+                Button(
+                    onClick = { scope.launch { viewModel.getFieldValuesYomitan()} },
+                ) { Text("Yomitan Fetch") }
+
+                IconButton(onClick = { scope.launch { viewModel.saveFields() } }) {
+                    Icon(Icons.Default.Done, contentDescription = "Save")
                 }
 
                 if (uiState.isLoadingModels) {
-                    Text("Loading models...")
+                    Text(modifier = Modifier
+                        .padding(16.dp),
+                        text = "Loading models..."
+                    )
                 } else {
                     ModelSelectorMenu(
                         modelNames = uiState.modelNames,
                         onModelSelected = viewModel::selectModel
                     )
                 }
+
             }
 
-
-            if (uiState.isLoadingFields) {
-                Text("Loading fields...")
-            } else {
-                uiState.fieldNames.forEach { fieldName ->
-                    Text(fieldName)
+            Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+            ) {
+                if (uiState.isLoadingFields) {
+                    Text("Loading fields...")
+                } else {
+                    uiState.fieldNames.forEach { fieldName ->
+                        ModelTextField(
+                            fieldName = fieldName,
+                            value = uiState.fieldValues[fieldName] ?: "",
+                            onValueChange = { viewModel.updateFieldValue(fieldName, it) },
+                        )
+                    }
                 }
             }
+
             uiState.errorMessage?.let { error ->
                 Text(error)
             }
         }
+    }
+}
+
+@Composable
+fun ModelTextField(
+    fieldName: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    Column {
+        Text(fieldName)
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
