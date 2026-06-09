@@ -55,13 +55,10 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
     private val _uiState = MutableStateFlow(AnkiConfigsUiState())
     val uiState = _uiState.asStateFlow()
     private var fieldJob: Job? = null
-    fun selectModel(modelName : String) {
-        _uiState.update {
-            it.copy (
-                selectedModel = modelName
-            )
-        }
-        loadFields(modelName)
+
+    suspend fun saveFields() {
+        val model = _uiState.value.selectedModel ?: return
+        AnkiFieldStore.save(getApplication(), model, _uiState.value.fieldValues)
     }
 
     fun loadFields(modelName: String) {
@@ -72,6 +69,15 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         }
     }
 
+    fun selectModel(modelName : String) {
+        _uiState.update {
+            it.copy (
+                selectedModel = modelName
+            )
+        }
+        loadFields(modelName)
+    }
+
     fun updateFieldValue(fieldName: String, value: String) {
         _uiState.update {
             it.copy(
@@ -79,12 +85,6 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
             )
         }
     }
-
-    suspend fun saveFields() {
-        val model = _uiState.value.selectedModel ?: return
-        AnkiFieldStore.save(getApplication(), model, _uiState.value.fieldValues)
-    }
-
 
     private suspend fun getAnkiConnectUrl(): String {
         val config = APIConfigs.getConfigs(getApplication()).first()
