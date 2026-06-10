@@ -32,7 +32,8 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
     private val _uiState = MutableStateFlow(AnkiConfigsUiState())
     val uiState = _uiState.asStateFlow()
     private var fieldJob: Job? = null
-    private var fetchAttemptId = 0
+    private var modelFetchAttemptId = 0
+    private var fieldFetchAttemptId = 0
 
     suspend fun saveFields() {
         val model = _uiState.value.selectedModel ?: return
@@ -43,10 +44,12 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         fieldJob?.cancel()
         fieldJob = viewModelScope.launch {
             val fields = AnkiFieldStore.getFields(getApplication(), modelName).first()
-            _uiState.update {
-                it.copy(
-                    fieldValues = fields
-                )
+            if (_uiState.value.selectedModel == modelName) {
+                _uiState.update {
+                    it.copy(
+                        fieldValues = fields
+                    )
+                }
             }
         }
     }
@@ -57,7 +60,6 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                 selectedModel = modelName
             )
         }
-        loadFields(modelName)
     }
 
     fun setFieldValue(fieldName: String, value: String) {
@@ -80,7 +82,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
 
     suspend fun getModelNames(){
         val ankiConnectUrl = getAnkiConnectUrl()
-        val currentFetchAttemptId = ++fetchAttemptId
+        val currentModelFetchAttemptId = ++modelFetchAttemptId
         _uiState.update {
             it.copy(
                 isLoadingModels = true,
@@ -102,7 +104,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                     val body = response.body.string()
                     val result = JSONObject(body).getJSONArray("result")
                     val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first()
-                    if (fetchAttemptId == currentFetchAttemptId) {
+                    if (currentModelFetchAttemptId == modelFetchAttemptId) {
                         _uiState.update {
                             it.copy(
                                 modelNames = List(result.length()) { i -> result.getString(i) },
@@ -112,22 +114,27 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                     }
                 }
             } catch (e : Exception) {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = e.message
-                    )
+                if (currentModelFetchAttemptId == modelFetchAttemptId) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = e.message
+                        )
+                    }
                 }
             }
-            _uiState.update {
-                it.copy(
-                    isLoadingModels = false
-                )
+            if (currentModelFetchAttemptId == modelFetchAttemptId) {
+                _uiState.update {
+                    it.copy(
+                        isLoadingModels = false
+                    )
+                }
             }
         }
     }
 
     suspend fun getFieldNames(modelName : String){
         val ankiConnectUrl = getAnkiConnectUrl()
+        val currentFieldFetchAttemptId = ++fieldFetchAttemptId
         _uiState.update {
             it.copy(
                 isLoadingFields = true,
@@ -151,30 +158,37 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()
                     val result = JSONObject(body).getJSONArray("result")
-                    _uiState.update {
-                        it.copy(
-                            fieldNames = List(result.length()) { i -> result.getString(i) }
-                        )
+                    if (fieldFetchAttemptId == currentFieldFetchAttemptId) {
+                        _uiState.update {
+                            it.copy(
+                                fieldNames = List(result.length()) { i -> result.getString(i) }
+                            )
+                        }
                     }
                 }
             } catch (e : Exception) {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = e.message
-                    )
+                if (fieldFetchAttemptId == currentFieldFetchAttemptId) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = e.message
+                        )
+                    }
                 }
             }
-            _uiState.update {
-                it.copy(
-                    isLoadingFields = false
-                )
+            if (fieldFetchAttemptId == currentFieldFetchAttemptId) {
+                _uiState.update {
+                    it.copy(
+                        isLoadingFields = false
+                    )
+                }
             }
         }
     }
 
     suspend fun getFieldValuesYomitan() {
         val modelNames = _uiState.value.modelNames
-
+        val selectedModel = _uiState.value.selectedModel ?: return
+        val knownFields = _uiState.value.fieldNames.toSet()
         val url = getYomitanUrl()
         val body = JSONObject().apply {
             put("profileIndex", 0)
@@ -196,19 +210,24 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                         val model = models.getJSONObject(i)
                         val modelName = model.getString("model")
 
-                        if (modelName == _uiState.value.selectedModel) {
-                            val fieldsObj = model.getJSONObject("fields")
-                            val known = _uiState.value.fieldNames.toSet()
-                            val matched = fieldsObj.keys().asSequence()
-                                .filter {it in known}
-                                .associateWith { fieldName -> fieldsObj.getJSONObject(fieldName).getString("value") }
+                        if (modelName != selectedModel) {
+                            continue
+                        }
 
+                        val fieldsObj = model.getJSONObject("fields")
+                        val matched = fieldsObj.keys().asSequence()
+                            .filter { it in knownFields }
+                            .associateWith { fieldName ->
+                                fieldsObj.getJSONObject(fieldName).getString("value")
+                            }
+                        if (_uiState.value.selectedModel == selectedModel) {
                             _uiState.update {
                                 it.copy(
                                     fieldValues = it.fieldValues + matched
                                 )
                             }
                         }
+                        break
                     }
                 }
             } catch (e: Exception) {

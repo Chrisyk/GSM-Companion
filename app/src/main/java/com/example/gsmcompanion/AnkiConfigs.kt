@@ -12,8 +12,10 @@ object AnkiFieldStore {
     private val SELECTED_MODEL = stringPreferencesKey("anki_selected_model")
     suspend fun save(context: Context, model: String, values: Map<String, String>) {
         val json = JSONObject(values as Map<*, *>).toString()
-        context.dataStore.edit { it[keyFor(model)] = json }
-        context.dataStore.edit { it[SELECTED_MODEL] = model }
+        context.dataStore.edit {
+            it[keyFor(model)] = json
+            it[SELECTED_MODEL] = model
+        }
     }
 
     fun getSelectedModel(context: Context) : Flow<String?> =
