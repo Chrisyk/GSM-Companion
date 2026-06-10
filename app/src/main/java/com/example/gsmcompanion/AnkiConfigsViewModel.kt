@@ -231,7 +231,9 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = e.message) }
+                if (_uiState.value.selectedModel == selectedModel) {
+                    _uiState.update { it.copy(errorMessage = e.message) }
+                }
             }
         }
 
