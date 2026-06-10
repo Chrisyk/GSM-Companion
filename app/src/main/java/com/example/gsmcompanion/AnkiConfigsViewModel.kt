@@ -32,6 +32,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
     private val _uiState = MutableStateFlow(AnkiConfigsUiState())
     val uiState = _uiState.asStateFlow()
     private var fieldJob: Job? = null
+    private var fetchAttemptId = 0
 
     suspend fun saveFields() {
         val model = _uiState.value.selectedModel ?: return
@@ -79,11 +80,11 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
 
     suspend fun getModelNames(){
         val ankiConnectUrl = getAnkiConnectUrl()
+        val currentFetchAttemptId = ++fetchAttemptId
         _uiState.update {
             it.copy(
                 isLoadingModels = true,
                 errorMessage = null
-
             )
         }
         val body = JSONObject().apply {
@@ -101,11 +102,13 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                     val body = response.body.string()
                     val result = JSONObject(body).getJSONArray("result")
                     val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first()
-                    _uiState.update {
-                        it.copy(
-                            modelNames = List(result.length()) { i -> result.getString(i) },
-                            selectedModel = selectedModel
-                        )
+                    if (fetchAttemptId == currentFetchAttemptId) {
+                        _uiState.update {
+                            it.copy(
+                                modelNames = List(result.length()) { i -> result.getString(i) },
+                                selectedModel = selectedModel
+                            )
+                        }
                     }
                 }
             } catch (e : Exception) {
