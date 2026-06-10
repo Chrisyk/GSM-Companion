@@ -1,18 +1,13 @@
 package com.example.gsmcompanion
 
 import android.app.Application
-import android.content.Context
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,30 +16,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.collections.emptyMap
-
-object AnkiFieldStore {
-    private fun keyFor(model: String) = stringPreferencesKey("anki_fields_$model")
-    private val SELECTED_MODEL = stringPreferencesKey("selected_mode")
-    suspend fun save(context: Context, model: String, values: Map<String, String>) {
-        val json = JSONObject(values as Map<*, *>).toString()
-        context.dataStore.edit { it[keyFor(model)] = json }
-        context.dataStore.edit { it[SELECTED_MODEL] = model }
-    }
-
-    fun getSelectedModel(context: Context) : Flow<String?> =
-        context.dataStore.data.map { preferences ->
-            preferences[SELECTED_MODEL]
-        }
-
-    fun getFields(context: Context, model: String) : Flow<Map<String, String>> =
-        context.dataStore.data.map { pref ->
-            val json = pref[keyFor(model)] ?: return@map emptyMap()
-            val obj = JSONObject(json)
-            obj.keys().asSequence().associateWith {
-                obj.getString(it)
-            }
-        }
-}
 
 data class AnkiConfigsUiState (
     val modelNames: List<String> = emptyList(),
