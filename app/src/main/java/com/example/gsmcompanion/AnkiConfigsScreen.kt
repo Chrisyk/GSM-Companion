@@ -53,6 +53,7 @@ fun AnkiConfigsScreen(
         val selectedModel = uiState.selectedModel
         if (selectedModel != null) {
             viewModel.getFieldNames(selectedModel)
+            viewModel.loadFields(selectedModel)
         }
     }
     Scaffold(
@@ -115,7 +116,7 @@ fun AnkiConfigsScreen(
                         ModelTextField(
                             fieldName = fieldName,
                             value = uiState.fieldValues[fieldName] ?: "",
-                            onValueChange = { viewModel.updateFieldValue(fieldName, it) },
+                            onValueChange = { viewModel.setFieldValue(fieldName, it) },
                         )
                     }
                 }

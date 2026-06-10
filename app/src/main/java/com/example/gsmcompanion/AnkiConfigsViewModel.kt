@@ -24,11 +24,17 @@ import kotlin.collections.emptyMap
 
 object AnkiFieldStore {
     private fun keyFor(model: String) = stringPreferencesKey("anki_fields_$model")
-
+    private val SELECTED_MODEL = stringPreferencesKey("selected_mode")
     suspend fun save(context: Context, model: String, values: Map<String, String>) {
         val json = JSONObject(values as Map<*, *>).toString()
         context.dataStore.edit { it[keyFor(model)] = json }
+        context.dataStore.edit { it[SELECTED_MODEL] = model }
     }
+
+    fun getSelectedModel(context: Context) : Flow<String?> =
+        context.dataStore.data.map { preferences ->
+            preferences[SELECTED_MODEL]
+        }
 
     fun getFields(context: Context, model: String) : Flow<Map<String, String>> =
         context.dataStore.data.map { pref ->
@@ -65,7 +71,11 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         fieldJob?.cancel()
         fieldJob = viewModelScope.launch {
             val fields = AnkiFieldStore.getFields(getApplication(), modelName).first()
-                    _uiState.update { it.copy(fieldValues = fields) }
+            _uiState.update {
+                it.copy(
+                    fieldValues = fields
+                )
+            }
         }
     }
 
@@ -78,7 +88,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         loadFields(modelName)
     }
 
-    fun updateFieldValue(fieldName: String, value: String) {
+    fun setFieldValue(fieldName: String, value: String) {
         _uiState.update {
             it.copy(
                 fieldValues = it.fieldValues + (fieldName to value)
@@ -119,9 +129,11 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()
                     val result = JSONObject(body).getJSONArray("result")
+                    val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first()
                     _uiState.update {
                         it.copy(
-                            modelNames = List(result.length()) { i -> result.getString(i) }
+                            modelNames = List(result.length()) { i -> result.getString(i) },
+                            selectedModel = selectedModel
                         )
                     }
                 }
@@ -210,7 +222,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                         val model = models.getJSONObject(i)
                         val modelName = model.getString("model")
 
-                        if (modelName in modelNames) {
+                        if (modelName == _uiState.value.selectedModel) {
                             val fieldsObj = model.getJSONObject("fields")
                             val known = _uiState.value.fieldNames.toSet()
                             val matched = fieldsObj.keys().asSequence()
