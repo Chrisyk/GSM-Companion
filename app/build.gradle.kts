@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.10"
 }
 
 android {
@@ -36,6 +37,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui)

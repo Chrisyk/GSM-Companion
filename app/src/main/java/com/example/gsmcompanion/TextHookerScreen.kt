@@ -1,13 +1,12 @@
 package com.example.gsmcompanion
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -17,11 +16,17 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,13 +75,13 @@ fun TextHookerScreen(
                 .padding(16.dp)
 
         ) {
-            MessageList(uiState.sentences)
+            MessageList(uiState.sentences, viewModel::onTextPointSelected)
         }
     }
 }
 
 @Composable
-fun MessageList(sentences: List<String>) {
+fun MessageList(sentences: List<String>, onTextPointSelected: (String, Int) -> Unit) {
     val listState = rememberLazyListState()
     LaunchedEffect(sentences.size) {
         if (sentences.isNotEmpty()) {
@@ -90,12 +95,37 @@ fun MessageList(sentences: List<String>) {
         items(
             items = sentences,
         ) { sentence ->
-            Text(
-                text = sentence,
-                modifier = Modifier.padding(8.dp)
+            HookedSentenceRow (
+                sentence = sentence,
+                onTextPointSelected = onTextPointSelected
             )
 
         }
     }
+}
+
+@Composable
+fun HookedSentenceRow(
+    sentence: String,
+    onTextPointSelected: (sentence: String, charOffset: Int) -> Unit
+) {
+    var layoutResult by remember {
+        mutableStateOf<TextLayoutResult?>(null)
+    }
+
+    Text(
+        text = sentence,
+        modifier = Modifier
+            .padding(8.dp)
+            .pointerInput(sentence) {
+                detectTapGestures { offset ->
+                    val charOffset = layoutResult?.getOffsetForPosition(offset)
+                    if (charOffset != null) {
+                        onTextPointSelected(sentence, charOffset)
+                    }
+                }
+            },
+        onTextLayout = { layoutResult = it }
+    )
 }
 
