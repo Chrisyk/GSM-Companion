@@ -22,12 +22,14 @@ data class TextHookerUiState(
         ConnectionStatus.Disconnected,
     val sentences: List<String> = listOf("今日は散歩しましょう"),
     val termEntriesResponse: TermEntriesResponse? = null,
-    val errorMessage: String? = null
+    val termEntriesErrorMessage: String? = null,
+    val textHookerErrorMessage: String? = null
+
 )
 
 @Serializable
 data class TermEntriesResponse(
-    val index: Int,
+    val index: Int = 0,
     val dictionaryEntries: List<DictionaryEntry> = emptyList()
 )
 
@@ -78,7 +80,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
             it.copy(
                 connectionStatus=
                     ConnectionStatus.Connecting,
-                errorMessage = null
+                textHookerErrorMessage = null
             )
         }
         textHookerClient.connect(
@@ -120,13 +122,22 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                         it.copy(
                             connectionStatus =
                                 ConnectionStatus.Error,
-                            errorMessage =
+                            textHookerErrorMessage =
                                 error.message
                         )
                     }
                 }
             }
         )
+    }
+
+    fun clearTermEntries() {
+        _uiState.update {
+            it.copy(
+                termEntriesResponse = null,
+                termEntriesErrorMessage = null
+            )
+        }
     }
 
     fun disconnect() {
@@ -138,7 +149,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.update {
             it.copy(
                 connectionStatus = ConnectionStatus.Disconnected,
-                errorMessage = null
+                textHookerErrorMessage = null
             )
         }
     }
@@ -182,7 +193,8 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                     val parsed = json.decodeFromString<TermEntriesResponse>(responseBody)
                     _uiState.update {
                         it.copy(
-                            termEntriesResponse = parsed
+                            termEntriesResponse = parsed,
+                            termEntriesErrorMessage = null
                         )
                     }
                     val firstHeadword = parsed.dictionaryEntries
@@ -200,7 +212,8 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
 
                 _uiState.update {
                     it.copy(
-                        errorMessage = e.message
+                        termEntriesResponse = null,
+                        termEntriesErrorMessage = e.message ?: "Failed to load definition"
                     )
                 }
             }

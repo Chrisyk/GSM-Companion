@@ -26,7 +26,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +44,7 @@ fun TextHookerScreen(
         ConnectionStatus.Connected -> "Connected"
         ConnectionStatus.Connecting -> "Connecting"
         ConnectionStatus.Disconnected -> "Disconnected"
-        ConnectionStatus.Error -> uiState.errorMessage ?: "Error"
+        ConnectionStatus.Error -> uiState.textHookerErrorMessage ?: "Error"
     }
 
     val statusText = "$websocketAddress: $statusMessage"
@@ -76,6 +75,14 @@ fun TextHookerScreen(
 
         ) {
             MessageList(uiState.sentences, viewModel::onTextPointSelected)
+        }
+
+        if (uiState.termEntriesResponse != null || uiState.termEntriesErrorMessage != null) {
+            DefinitionBottomSheet(
+                response = uiState.termEntriesResponse,
+                errorMessage = uiState.termEntriesErrorMessage,
+                onDismiss = viewModel::clearTermEntries
+            )
         }
     }
 }
