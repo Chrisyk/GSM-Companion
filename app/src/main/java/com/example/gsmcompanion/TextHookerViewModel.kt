@@ -21,18 +21,18 @@ import org.json.JSONObject
 data class TextHookerUiState(
     val connectionStatus: ConnectionStatus =
         ConnectionStatus.Disconnected,
-    val sentences: List<String> = listOf("今日は散歩しましょう"),
+    val sentences: List<String> = listOf("今日は散歩しましょう", "官僚は新しい法案を提案した"),
     val textHookerErrorMessage: String? = null,
     val termEntriesResponse: TermEntriesResponse? = null,
     val termEntriesErrorMessage: String? = null,
-    val ankiFieldsErrorMessage: String? = null
+    val ankiFieldsErrorMessage: String? = null,
+    val selectedSentenceIndex: Int? = null,
+    val offset: Int? = null,
+    val originalTextLength: Int? = null
 )
 
 private data class SelectionContext(
     val originalSentence: String? = null,
-    val clozeBodyKana: String? = null,
-    val offset: Int? = null,
-    val originalTextLength: Int? = null
 )
 
 @Serializable
@@ -170,8 +170,11 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     fun clearTermEntries() {
         _uiState.update {
             it.copy(
+                selectedSentenceIndex = null,
                 termEntriesResponse = null,
-                termEntriesErrorMessage = null
+                termEntriesErrorMessage = null,
+                offset = null,
+                originalTextLength = null
             )
         }
     }
@@ -204,13 +207,21 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         return APIConfigs.getURL(config, PortName.AnkiConnect)
     }
 
-    fun onTextPointSelected(sentence: String, charOffset: Int) {
+    fun onTextPointSelected(selectedSentenceIndex: Int?, sentence: String, charOffset: Int) {
         val subsentence = sentence.substring(charOffset)
 
         selectionContext = SelectionContext(
             originalSentence = sentence,
-            offset = charOffset
         )
+
+        _uiState.update {
+            it.copy(
+                selectedSentenceIndex = selectedSentenceIndex,
+                offset = charOffset,
+                originalTextLength = null
+            )
+        }
+
         viewModelScope.launch {
             getTermEntries(subsentence)
         }
@@ -245,8 +256,9 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                         ?.firstOrNull()?.originalText
 
                     if (originalText != null) {
-                        selectionContext =
-                            selectionContext?.copy(originalTextLength = originalText.length)
+                        _uiState.update {
+                            it.copy(originalTextLength = originalText.length)
+                        }
                     }
 
                     _uiState.update {
@@ -353,9 +365,9 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
 
         val originalSentence = selectionContext?.originalSentence
             ?: throw IllegalStateException("Failed to load sentence")
-        val offset = selectionContext?.offset
+        val offset = _uiState.value.offset
             ?: throw IllegalStateException("Failed to load target offset")
-        val originalTextLength = selectionContext?.originalTextLength
+        val originalTextLength = _uiState.value.originalTextLength
             ?: throw IllegalStateException("Failed to load target length")
 
         val localMarkers = mapOf(

@@ -1,14 +1,22 @@
 package com.example.gsmcompanion
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -22,8 +30,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 
@@ -74,7 +87,11 @@ fun TextHookerScreen(
                 .padding(16.dp)
 
         ) {
-            MessageList(uiState.sentences, viewModel::onTextPointSelected)
+            MessageList(uiState.sentences,
+                viewModel::onTextPointSelected,
+                uiState.selectedSentenceIndex,
+                uiState.offset,
+                uiState.originalTextLength)
         }
 
         if (uiState.termEntriesResponse != null || uiState.termEntriesErrorMessage != null) {
@@ -89,51 +106,82 @@ fun TextHookerScreen(
 }
 
 @Composable
-fun MessageList(sentences: List<String>, onTextPointSelected: (String, Int) -> Unit) {
+fun MessageList(sentences: List<String>,
+                onTextPointSelected: (Int?, String, Int) -> Unit,
+                selectedSentenceIndex: Int?,
+                offset: Int?,
+                originalTextLength: Int?
+                ) {
     val listState = rememberLazyListState()
+
     LaunchedEffect(sentences.size) {
         if (sentences.isNotEmpty()) {
             listState.animateScrollToItem(sentences.size - 1)
         }
     }
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        items(
-            items = sentences,
-        ) { sentence ->
-            HookedSentenceRow(
-                sentence = sentence,
-                onTextPointSelected = onTextPointSelected
-            )
 
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+        itemsIndexed(sentences) { index, sentence ->
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.fillMaxWidth().padding(end = 4.dp, top = 4.dp, bottom = 8.dp)
+            ) {
+                if (selectedSentenceIndex == index && offset != null && originalTextLength != null) {
+                    SentenceText(text = highlightedSentence(sentence, offset, originalTextLength))
+                } else {
+                    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+                    SentenceText(
+                        text = AnnotatedString(sentence),
+                        modifier = Modifier.pointerInput(sentence) {
+                            detectTapGestures { pos ->
+                                layoutResult?.getOffsetForPosition(pos)?.let {
+                                    onTextPointSelected(index, sentence, it)
+                                }
+                            }
+                        },
+                        onTextLayout = { layoutResult = it }
+                    )
+                }
+            }
         }
     }
 }
 
-@Composable
-fun HookedSentenceRow(
-    sentence: String,
-    onTextPointSelected: (sentence: String, charOffset: Int) -> Unit
-) {
-    var layoutResult by remember {
-        mutableStateOf<TextLayoutResult?>(null)
-    }
 
+@Composable
+private fun SentenceText(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    onTextLayout: (TextLayoutResult) -> Unit = {}
+) {
     Text(
-        text = sentence,
-        modifier = Modifier
-            .padding(8.dp)
-            .pointerInput(sentence) {
-                detectTapGestures { offset ->
-                    val charOffset = layoutResult?.getOffsetForPosition(offset)
-                    if (charOffset != null) {
-                        onTextPointSelected(sentence, charOffset)
-                    }
-                }
-            },
-        onTextLayout = { layoutResult = it }
+        text = text,
+        style = MaterialTheme.typography.bodyLarge.copy(
+            fontSize = 22.sp,
+            lineHeight = 34.sp
+        ),
+        modifier = Modifier.padding(horizontal = 8.dp, vertical = 24.dp)
+            .then(modifier),
+        onTextLayout = onTextLayout
     )
+}
+
+@Composable
+private fun highlightedSentence(sentence: String, start: Int, length: Int): AnnotatedString {
+    val highlight = MaterialTheme.colorScheme.primaryContainer
+    return remember(sentence, start, length, highlight) {
+        buildAnnotatedString {
+            append(sentence)
+            val s = start.coerceIn(0, sentence.length)
+            val e = (start + length).coerceIn(s, sentence.length)
+            if (e > s) {
+                addStyle(SpanStyle(background = highlight), s, e)
+            }
+        }
+    }
 }
 
