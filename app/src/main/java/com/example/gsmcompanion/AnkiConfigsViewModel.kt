@@ -16,9 +16,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import kotlin.collections.emptyMap
 
-data class AnkiConfigsUiState (
+data class AnkiConfigsUiState(
     val modelNames: List<String> = emptyList(),
     val selectedModel: String? = null,
     val fieldNames: List<String> = emptyList(),
@@ -28,9 +27,9 @@ data class AnkiConfigsUiState (
     val isLoadingModelsDecks: Boolean = false,
     val isLoadingFields: Boolean = false,
     val errorMessage: String? = null
-    )
+)
 
-class AnkiConfigsViewModel(application : Application) : AndroidViewModel(application) {
+class AnkiConfigsViewModel(application: Application) : AndroidViewModel(application) {
     private val client = okhttp3.OkHttpClient()
     private val _uiState = MutableStateFlow(AnkiConfigsUiState())
     val uiState = _uiState.asStateFlow()
@@ -49,10 +48,12 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
             }
             return
         }
-        AnkiFieldStore.save(getApplication(),
+        AnkiFieldStore.save(
+            getApplication(),
             model,
             deck,
-            _uiState.value.fieldValues)
+            _uiState.value.fieldValues
+        )
         _uiState.update {
             it.copy(
                 errorMessage = null
@@ -74,17 +75,17 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         }
     }
 
-    fun selectModel(modelName : String) {
+    fun selectModel(modelName: String) {
         _uiState.update {
-            it.copy (
+            it.copy(
                 selectedModel = modelName
             )
         }
     }
 
-    fun selectDeck(deckName : String) {
+    fun selectDeck(deckName: String) {
         _uiState.update {
-            it.copy (
+            it.copy(
                 selectedDeck = deckName
             )
         }
@@ -108,7 +109,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         return APIConfigs.getURL(config, PortName.Yomitan)
     }
 
-    suspend fun getModelDeckNames(){
+    suspend fun getModelDeckNames() {
         val ankiConnectUrl = getAnkiConnectUrl()
         val currentModelFetchAttemptId = ++modelFetchAttemptId
         _uiState.update {
@@ -118,9 +119,9 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
             )
         }
         val actions = JSONArray().apply {
-            put(JSONObject().put("action","deckNames"))
-            put (JSONObject().put("action", "modelNames"))
-         }
+            put(JSONObject().put("action", "deckNames"))
+            put(JSONObject().put("action", "modelNames"))
+        }
         val body = JSONObject().apply {
             put("action", "multi")
             put("version", 5)
@@ -131,15 +132,19 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
             .post(body.toRequestBody())
             .build()
 
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             try {
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()
                     val result = JSONObject(body).getJSONArray("result")
                     val deckNames = result.getJSONArray(0)
                     val modelNames = result.getJSONArray(1)
-                    val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).firstOrNull() ?: modelNames.getString(0)
-                    val selectedDeck = AnkiFieldStore.getSelectedDeck(getApplication()).firstOrNull() ?: modelNames.getString(0)
+                    val selectedModel =
+                        AnkiFieldStore.getSelectedModel(getApplication()).firstOrNull()
+                            ?: modelNames.getString(0)
+                    val selectedDeck =
+                        AnkiFieldStore.getSelectedDeck(getApplication()).firstOrNull()
+                            ?: modelNames.getString(0)
                     if (currentModelFetchAttemptId == modelFetchAttemptId) {
                         _uiState.update {
                             it.copy(
@@ -151,7 +156,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                         }
                     }
                 }
-            } catch (e : Exception) {
+            } catch (e: Exception) {
                 if (currentModelFetchAttemptId == modelFetchAttemptId) {
                     _uiState.update {
                         it.copy(
@@ -170,7 +175,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         }
     }
 
-    suspend fun getFieldNames(modelName : String){
+    suspend fun getFieldNames(modelName: String) {
         val ankiConnectUrl = getAnkiConnectUrl()
         val currentFieldFetchAttemptId = ++fieldFetchAttemptId
         _uiState.update {
@@ -180,9 +185,9 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
             )
         }
         val body = JSONObject().apply {
-            put ("action", "modelFieldNames")
+            put("action", "modelFieldNames")
             put("version", 5)
-            put ("params", JSONObject().apply {
+            put("params", JSONObject().apply {
                 put("modelName", modelName)
             })
         }.toString()
@@ -191,7 +196,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
             .post(body.toRequestBody())
             .build()
 
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             try {
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()
@@ -204,7 +209,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                         }
                     }
                 }
-            } catch (e : Exception) {
+            } catch (e: Exception) {
                 if (fieldFetchAttemptId == currentFieldFetchAttemptId) {
                     _uiState.update {
                         it.copy(
@@ -238,7 +243,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         if (modelNames.isEmpty()) {
             return
         }
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             try {
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()

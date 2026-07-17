@@ -12,11 +12,12 @@ object AnkiFieldStore {
     private val SELECTED_MODEL = stringPreferencesKey("anki_selected_model")
     private val SELECTED_DECK = stringPreferencesKey("anki_selected_deck")
 
-    suspend fun save(context: Context,
-                     model: String,
-                     deck: String,
-                     values: Map<String, String>
-                     ) {
+    suspend fun save(
+        context: Context,
+        model: String,
+        deck: String,
+        values: Map<String, String>
+    ) {
         val fieldsJson = JSONObject(values as Map<*, *>).toString()
         context.dataStore.edit {
             it[fieldsFor(model)] = fieldsJson
@@ -25,17 +26,17 @@ object AnkiFieldStore {
         }
     }
 
-    fun getSelectedModel(context: Context) : Flow<String?> =
+    fun getSelectedModel(context: Context): Flow<String?> =
         context.dataStore.data.map { preferences ->
             preferences[SELECTED_MODEL]
         }
 
-    fun getSelectedDeck(context: Context) : Flow<String?> =
+    fun getSelectedDeck(context: Context): Flow<String?> =
         context.dataStore.data.map { preferences ->
             preferences[SELECTED_DECK]
         }
 
-    fun getFields(context: Context, model: String) : Flow<Map<String, String>> =
+    fun getFields(context: Context, model: String): Flow<Map<String, String>> =
         context.dataStore.data.map { pref ->
             val json = pref[fieldsFor(model)] ?: return@map emptyMap()
             val obj = JSONObject(json)

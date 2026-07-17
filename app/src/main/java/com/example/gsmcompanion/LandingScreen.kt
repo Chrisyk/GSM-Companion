@@ -18,21 +18,20 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.gsmcompanion.ui.theme.GSMCompanionTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-
+import com.example.gsmcompanion.ui.theme.GSMCompanionTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +46,7 @@ class MainActivity : ComponentActivity() {
                     composable("landing") { LandingScreen(navController) }
                     composable("textHooker") { TextHookerScreen(navController) }
                     composable("healthCheck") { HealthCheckScreen(navController) }
-                    composable("ankiConfigs") { AnkiConfigsScreen(navController)}
+                    composable("ankiConfigs") { AnkiConfigsScreen(navController) }
                 }
             }
         }
@@ -58,7 +57,7 @@ class MainActivity : ComponentActivity() {
 fun LandingScreen(
     navController: NavController,
     viewModel: LandingViewModel = viewModel()
-){
+) {
     val state by viewModel.settingsState.collectAsState()
 
     val scrollState = rememberScrollState()
@@ -84,25 +83,25 @@ fun LandingScreen(
                 "Default Gateway",
                 state.defaultGateway,
                 onSave = { gateway -> viewModel.setDefaultGateway(gateway) },
-                { input : String -> viewModel.gatewayCheck(input) }
+                { input: String -> viewModel.gatewayCheck(input) }
             )
-            ConfigSettings (
+            ConfigSettings(
                 "Yomitan",
                 state.yomitanApiPort.toString(),
                 onSave = { port -> viewModel.setYomitanPort(port) },
-                { input : String -> viewModel.portCheck(input) }
+                { input: String -> viewModel.portCheck(input) }
             )
             ConfigSettings(
                 "AnkiConnect",
                 state.ankiConnectApiPort.toString(),
                 onSave = { port -> viewModel.setAnkiConnectPort(port) },
-                { input : String -> viewModel.portCheck(input) }
+                { input: String -> viewModel.portCheck(input) }
             )
             ConfigSettings(
                 "GSM Unified",
                 state.gsmUnifiedPort.toString(),
-                onSave = { port : String -> viewModel.setGSMUnifiedPort(port) },
-                { input : String -> viewModel.portCheck(input) }
+                onSave = { port: String -> viewModel.setGSMUnifiedPort(port) },
+                { input: String -> viewModel.portCheck(input) }
             )
         }
 
@@ -131,16 +130,16 @@ fun ConfigSettings(
     savedConfig: String,
     onSave: suspend (String) -> Unit,
     check: (String) -> CheckCodes
-){
+) {
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
-    LaunchedEffect(savedConfig){
+    LaunchedEffect(savedConfig) {
         input = savedConfig
     }
     val code = check(input)
     val isValid = code == CheckCodes.SUCCESS
     Column {
-        Text (
+        Text(
             text = "$label: ($savedConfig)"
         )
         Row {
@@ -170,18 +169,18 @@ fun ConfigSettings(
                     scope.launch {
                         onSave(input)
                     }
-            }) { Text("Set") }
+                }) { Text("Set") }
         }
     }
 }
 
 @Composable
-fun BottomBar(navController: NavController){
+fun BottomBar(navController: NavController) {
     BottomAppBar {
-        NavigateButton("Text Hooker"){ navController.navigate("textHooker") }
+        NavigateButton("Text Hooker") { navController.navigate("textHooker") }
         NavigateButton("Health Check") { navController.navigate("healthCheck") }
         NavigateButton("Port Settings") { navController.navigate("landing") }
-        NavigateButton("Anki Settings") {navController.navigate("ankiConfigs")}
+        NavigateButton("Anki Settings") { navController.navigate("ankiConfigs") }
     }
 }
 

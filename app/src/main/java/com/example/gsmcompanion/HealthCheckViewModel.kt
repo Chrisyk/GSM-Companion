@@ -32,7 +32,7 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
         started = SharingStarted.WhileSubscribed(5000L),
         initialValue = Configs()
     )
-    private var pingJob : Job? = null
+    private var pingJob: Job? = null
 
     fun startPinging() {
         if (pingJob != null) return
@@ -60,23 +60,24 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
         pingJob = null
     }
 
-    fun checkHealthStatus(url: String, key : PortName) {
+    fun checkHealthStatus(url: String, key: PortName) {
         try {
             val request = Request.Builder()
                 .url(url)
                 .build()
             client.newCall(request).execute().use { response ->
                 updateStatus(
-                    key, if (response.code == 200 || (key == PortName.Yomitan && response.code == 405)) ConnectionStatus.Connected else
+                    key,
+                    if (response.code == 200 || (key == PortName.Yomitan && response.code == 405)) ConnectionStatus.Connected else
                         ConnectionStatus.Disconnected
                 )
             }
-        } catch (e : Exception) {
+        } catch (e: Exception) {
             updateStatus(key, ConnectionStatus.Disconnected)
         }
     }
 
-    fun updateStatus( key : PortName , status: ConnectionStatus) {
+    fun updateStatus(key: PortName, status: ConnectionStatus) {
         when (key) {
             PortName.GSM -> _portHealthStatuses.update {
                 it.copy(

@@ -1,4 +1,5 @@
 package com.example.gsmcompanion
+
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -14,7 +15,7 @@ class TextHookerClient(
             .build()
 ) {
 
-    private var webSocket : WebSocket? = null
+    private var webSocket: WebSocket? = null
 
     fun connect(
         url: String,
@@ -30,7 +31,7 @@ class TextHookerClient(
             .build()
         webSocket = okHttpClient.newWebSocket(
             request,
-            object: WebSocketListener() {
+            object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     onOpen()
                 }

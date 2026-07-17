@@ -25,14 +25,14 @@ enum class ConnectionStatus {
     Error,
 }
 
-data class Configs (
-    val defaultGateway : String = "127.0.0.1",
-    val gsmUnifiedPort : Int = 7275,
-    val yomitanApiPort : Int = 19633,
-    val ankiConnectApiPort : Int = 8765,
+data class Configs(
+    val defaultGateway: String = "127.0.0.1",
+    val gsmUnifiedPort: Int = 7275,
+    val yomitanApiPort: Int = 19633,
+    val ankiConnectApiPort: Int = 8765,
 )
 
-data class PortHealthStatuses (
+data class PortHealthStatuses(
     val gsmUnifiedPortStatus: ConnectionStatus =
         ConnectionStatus.Disconnected,
     val yomitanPortStatus: ConnectionStatus =
@@ -62,7 +62,7 @@ object APIConfigs {
         configs: Configs,
         portName: PortName,
         protocol: String = "http"
-    ) : String {
+    ): String {
         val port = when (portName) {
             PortName.GSM -> configs.gsmUnifiedPort
             PortName.Yomitan -> configs.yomitanApiPort

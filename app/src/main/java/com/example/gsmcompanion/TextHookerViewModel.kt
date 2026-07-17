@@ -13,13 +13,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import kotlinx.serialization.json.JsonElement
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
+import org.json.JSONObject
 
 data class TextHookerUiState(
-    val connectionStatus : ConnectionStatus =
+    val connectionStatus: ConnectionStatus =
         ConnectionStatus.Disconnected,
     val sentences: List<String> = listOf("今日は散歩しましょう"),
     val textHookerErrorMessage: String? = null,
@@ -28,7 +28,7 @@ data class TextHookerUiState(
     val ankiFieldsErrorMessage: String? = null
 )
 
-private data class SelectionContext (
+private data class SelectionContext(
     val originalSentence: String? = null,
     val clozeBodyKana: String? = null,
     val offset: Int? = null,
@@ -37,7 +37,7 @@ private data class SelectionContext (
 
 @Serializable
 data class AnkiFieldsResponse(
-    val fields: List<Map<String,String>> = emptyList(),
+    val fields: List<Map<String, String>> = emptyList(),
     val audioMedia: List<AudioMedia> = emptyList(),
     val dictionaryMedia: List<DictionaryMedia> = emptyList()
 )
@@ -94,7 +94,7 @@ data class Source(
     val originalText: String? = null,
 )
 
-class TextHookerViewModel(application: Application) : AndroidViewModel(application){
+class TextHookerViewModel(application: Application) : AndroidViewModel(application) {
     private val textHookerClient = TextHookerClient()
     private val client = okhttp3.OkHttpClient()
     private val _uiState = MutableStateFlow(TextHookerUiState())
@@ -105,16 +105,16 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     fun connect(url: String) {
         if (currentUrl == url &&
             (_uiState.value.connectionStatus == ConnectionStatus.Connecting ||
-                _uiState.value.connectionStatus == ConnectionStatus.Connected)
+                    _uiState.value.connectionStatus == ConnectionStatus.Connected)
         ) return
 
         val attemptId = ++connectionAttemptId
         textHookerClient.close()
         currentUrl = url
 
-        _uiState.update{
+        _uiState.update {
             it.copy(
-                connectionStatus=
+                connectionStatus =
                     ConnectionStatus.Connecting,
                 textHookerErrorMessage = null
             )
@@ -190,7 +190,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    override fun onCleared(){
+    override fun onCleared() {
         disconnect()
     }
 
@@ -245,7 +245,8 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                         ?.firstOrNull()?.originalText
 
                     if (originalText != null) {
-                        selectionContext = selectionContext?.copy(originalTextLength = originalText.length)
+                        selectionContext =
+                            selectionContext?.copy(originalTextLength = originalText.length)
                     }
 
                     _uiState.update {
@@ -255,7 +256,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                         )
                     }
                 }
-            } catch (e: Exception ) {
+            } catch (e: Exception) {
                 Log.e("Yomitan", "Failed to parse term entries", e)
 
                 _uiState.update {
@@ -272,12 +273,14 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.update {
             it.copy(
                 ankiFieldsErrorMessage = null
-                )
+            )
         }
 
         viewModelScope.launch {
-            val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first() ?: return@launch
-            val fieldsMap: Map<String, String> = AnkiFieldStore.getFields(getApplication(), selectedModel).first()
+            val selectedModel =
+                AnkiFieldStore.getSelectedModel(getApplication()).first() ?: return@launch
+            val fieldsMap: Map<String, String> =
+                AnkiFieldStore.getFields(getApplication(), selectedModel).first()
             try {
                 val ankiFields = getMarkerAnkiFields(term, fieldsMap)
                 val fields = buildAnkiFields(fieldsMap, ankiFields)
@@ -304,7 +307,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    suspend fun addNote(ankiFields: Map<String,String>) {
+    suspend fun addNote(ankiFields: Map<String, String>) {
         val url = getAnkiConnectUrl()
         val selectedDeckName = AnkiFieldStore.getSelectedDeck(getApplication()).first()
             ?: throw IllegalStateException("No Anki deck selected")
@@ -345,7 +348,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     private val markerPattern = Regex("""\{([\p{L}\p{N}_-]+)\}""")
 
     fun buildAnkiFields(fieldsMap: Map<String, String>, ankiFields: AnkiFieldsResponse)
-    : Map<String, String>{
+            : Map<String, String> {
         val rendered = ankiFields.fields.firstOrNull() ?: return emptyMap()
 
         val originalSentence = selectionContext?.originalSentence
@@ -370,7 +373,10 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    suspend fun getMarkerAnkiFields(term: String, fieldsMap: Map<String, String>): AnkiFieldsResponse {
+    suspend fun getMarkerAnkiFields(
+        term: String,
+        fieldsMap: Map<String, String>
+    ): AnkiFieldsResponse {
         val url = getYomitanUrl()
 
         val markers = parseMarkers(fieldsMap)

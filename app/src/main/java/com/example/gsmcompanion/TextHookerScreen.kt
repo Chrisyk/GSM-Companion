@@ -30,9 +30,9 @@ import androidx.navigation.NavController
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TextHookerScreen(
-    navController : NavController,
+    navController: NavController,
     viewModel: TextHookerViewModel = viewModel()
-    ) {
+) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val config by APIConfigs.getConfigs(context).collectAsState(
@@ -93,17 +93,17 @@ fun MessageList(sentences: List<String>, onTextPointSelected: (String, Int) -> U
     val listState = rememberLazyListState()
     LaunchedEffect(sentences.size) {
         if (sentences.isNotEmpty()) {
-            listState.animateScrollToItem(sentences.size -1)
+            listState.animateScrollToItem(sentences.size - 1)
         }
     }
-    LazyColumn (
+    LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize()
     ) {
         items(
             items = sentences,
         ) { sentence ->
-            HookedSentenceRow (
+            HookedSentenceRow(
                 sentence = sentence,
                 onTextPointSelected = onTextPointSelected
             )

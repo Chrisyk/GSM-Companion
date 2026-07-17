@@ -57,7 +57,7 @@ fun DefinitionBottomSheet(
                 text = "No Definitions Found"
             )
         } else {
-            LazyColumn() {
+            LazyColumn {
                 items(dictionaryEntries) { dictionaryEntry ->
                     DictionaryEntryCard(dictionaryEntry, onAddCard)
                     HorizontalDivider()
@@ -72,7 +72,7 @@ fun DictionaryEntryCard(
     dictionaryEntry: DictionaryEntry,
     onAddCard: (String) -> Unit
 ) {
-    Column() {
+    Column {
         // Entry expression
         dictionaryEntry.headwords.firstOrNull()?.let { hw ->
             Row(
@@ -102,7 +102,8 @@ fun DictionaryEntryCard(
             }
         }
         dictionaryEntry.definitions.forEach { definition ->
-            val source = definition.dictionaryAlias?.takeIf { it.isNotBlank() } ?: definition.dictionary
+            val source =
+                definition.dictionaryAlias?.takeIf { it.isNotBlank() } ?: definition.dictionary
             if (!source.isNullOrBlank()) {
                 Text(
                     text = source
@@ -121,16 +122,17 @@ fun DictionaryEntryCard(
 
 @Composable
 fun StructuredContent(node: JsonElement?) {
-    when(node) {
+    when (node) {
         is JsonPrimitive -> node.contentOrNull?.takeIf { it.isNotEmpty() }?.let { Text(it) }
         is JsonArray ->
             if (node.any { isBlockNode(it) }) {
-                Column() {
+                Column {
                     node.forEach { StructuredContent(it) }
                 }
             } else {
-                FlowRow() { node.forEach { StructuredContent(it) }}
+                FlowRow { node.forEach { StructuredContent(it) } }
             }
+
         is JsonObject -> RenderElement(node)
         else -> {}
     }
@@ -141,19 +143,23 @@ private fun RenderElement(node: JsonObject) {
     val tag = node["tag"]?.jsonPrimitive?.contentOrNull
     val child = node["content"]
     when (tag) {
-        "br" -> Spacer(modifier = Modifier.fillMaxWidth().height(4.dp))
+        "br" -> Spacer(modifier = Modifier
+            .fillMaxWidth()
+            .height(4.dp))
         "rt" -> {}
         "img" -> {}
         "ruby" -> RubyContent(child)
         "a" -> LinkText(node)
-        "ul", "ol" -> Column() {
+        "ul", "ol" -> Column {
             StructuredContent(child)
         }
-        "li" -> Column() {
+
+        "li" -> Column {
             Text("\t")
             StructuredContent(child)
         }
-        "div" -> Column() { StructuredContent(child) }
+
+        "div" -> Column { StructuredContent(child) }
         "span" -> SpanContent(node)
         else -> StructuredContent(child)
     }
@@ -164,7 +170,7 @@ private fun SpanContent(obj: JsonObject) {
     val child = obj["content"]
     val cssClass = obj["data"]?.jsonObject?.get("class")?.jsonPrimitive?.contentOrNull
     if (cssClass == "tag") {
-        Surface() {
+        Surface {
             Text(
                 text = plainText(child),
             )
@@ -181,7 +187,7 @@ private fun LinkText(obj: JsonObject) {
 
     Text(
         text = plainText(obj["content"]),
-        modifier = if (href != null) Modifier.clickable {uriHandler.openUri(href)} else Modifier
+        modifier = if (href != null) Modifier.clickable { uriHandler.openUri(href) } else Modifier
     )
 
 }
@@ -203,12 +209,13 @@ private fun RubyContent(obj: JsonElement?) {
                 }
 
             }
+
             else -> {}
         }
     }
     walk(obj)
-    Column() {
-        Text (
+    Column {
+        Text(
             text = reading.toString()
         )
         Text(
@@ -222,9 +229,9 @@ private fun isBlockNode(node: JsonElement): Boolean {
     return tag in setOf("div", "ul", "ol", "li", "table", "tr", "thead", "tbody", "details", "br")
 }
 
-private fun plainText(node: JsonElement?): String = when(node) {
-        is JsonPrimitive -> node.contentOrNull ?: ""
-        is JsonArray -> node.joinToString("") { plainText(it) }
-        is JsonObject -> plainText(node["content"])
-        else -> ""
+private fun plainText(node: JsonElement?): String = when (node) {
+    is JsonPrimitive -> node.contentOrNull ?: ""
+    is JsonArray -> node.joinToString("") { plainText(it) }
+    is JsonObject -> plainText(node["content"])
+    else -> ""
 }
