@@ -144,7 +144,7 @@ class AnkiConfigsViewModel(application: Application) : AndroidViewModel(applicat
                             ?: modelNames.getString(0)
                     val selectedDeck =
                         AnkiFieldStore.getSelectedDeck(getApplication()).firstOrNull()
-                            ?: modelNames.getString(0)
+                            ?: deckNames.getString(0)
                     if (currentModelFetchAttemptId == modelFetchAttemptId) {
                         _uiState.update {
                             it.copy(
