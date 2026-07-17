@@ -16,15 +16,45 @@ import kotlinx.serialization.json.Json
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import kotlinx.serialization.json.JsonElement
+import org.json.JSONArray
 
 data class TextHookerUiState(
     val connectionStatus : ConnectionStatus =
         ConnectionStatus.Disconnected,
     val sentences: List<String> = listOf("今日は散歩しましょう"),
+    val textHookerErrorMessage: String? = null,
     val termEntriesResponse: TermEntriesResponse? = null,
     val termEntriesErrorMessage: String? = null,
-    val textHookerErrorMessage: String? = null
+    val ankiFieldsErrorMessage: String? = null
+)
 
+private data class SelectionContext (
+    val originalSentence: String? = null,
+    val clozeBodyKana: String? = null,
+    val offset: Int? = null,
+    val originalTextLength: Int? = null
+)
+
+@Serializable
+data class AnkiFieldsResponse(
+    val fields: List<Map<String,String>> = emptyList(),
+    val audioMedia: List<AudioMedia> = emptyList(),
+    val dictionaryMedia: List<DictionaryMedia> = emptyList()
+)
+
+@Serializable
+data class DictionaryMedia(
+    val dictionary: String? = null,
+    val path: String? = null,
+    val mediaType: String? = null,
+    val content: String? = null,
+    val ankiFilename: String? = null
+)
+
+@Serializable
+data class AudioMedia(
+    val content: String? = null,
+    val ankiFilename: String? = null
 )
 
 @Serializable
@@ -42,7 +72,8 @@ data class DictionaryEntry(
 @Serializable
 data class Headword(
     val term: String,
-    val reading: String? = null
+    val reading: String? = null,
+    val sources: List<Source> = emptyList()
 )
 
 @Serializable
@@ -58,6 +89,11 @@ data class DefinitionEntry(
     val content: JsonElement? = null
 )
 
+@Serializable
+data class Source(
+    val originalText: String? = null,
+)
+
 class TextHookerViewModel(application: Application) : AndroidViewModel(application){
     private val textHookerClient = TextHookerClient()
     private val client = okhttp3.OkHttpClient()
@@ -65,7 +101,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     val uiState = _uiState.asStateFlow()
     private var connectionAttemptId = 0
     private var currentUrl: String? = null
-
+    private var selectionContext: SelectionContext? = null
     fun connect(url: String) {
         if (currentUrl == url &&
             (_uiState.value.connectionStatus == ConnectionStatus.Connecting ||
@@ -163,8 +199,18 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         return APIConfigs.getURL(config, PortName.Yomitan)
     }
 
+    private suspend fun getAnkiConnectUrl(): String {
+        val config = APIConfigs.getConfigs(getApplication()).first()
+        return APIConfigs.getURL(config, PortName.AnkiConnect)
+    }
+
     fun onTextPointSelected(sentence: String, charOffset: Int) {
         val subsentence = sentence.substring(charOffset)
+
+        selectionContext = SelectionContext(
+            originalSentence = sentence,
+            offset = charOffset
+        )
         viewModelScope.launch {
             getTermEntries(subsentence)
         }
@@ -184,28 +230,30 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
             try {
                 client.newCall(request).execute().use { response ->
                     val responseBody = response.body.string()
-                    Log.d("Yomitan", "HTTP ${response.code}")
-                    Log.d("Yomitan", "Raw body: $responseBody")
+
                     val json = Json {
                         ignoreUnknownKeys = true
                         isLenient = true
                     }
                     val parsed = json.decodeFromString<TermEntriesResponse>(responseBody)
+
+                    val originalText = parsed.dictionaryEntries
+                        .firstOrNull()
+                        ?.headwords
+                        ?.firstOrNull()
+                        ?.sources
+                        ?.firstOrNull()?.originalText
+
+                    if (originalText != null) {
+                        selectionContext = selectionContext?.copy(originalTextLength = originalText.length)
+                    }
+
                     _uiState.update {
                         it.copy(
                             termEntriesResponse = parsed,
                             termEntriesErrorMessage = null
                         )
                     }
-                    val firstHeadword = parsed.dictionaryEntries
-                        .firstOrNull()
-                        ?.headwords
-                        ?.firstOrNull()
-
-
-                    Log.d("Yomitan", "term: ${firstHeadword?.term}")
-                    Log.d("Yomitan", "reading: ${firstHeadword?.reading}")
-
                 }
             } catch (e: Exception ) {
                 Log.e("Yomitan", "Failed to parse term entries", e)
@@ -218,7 +266,169 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 }
             }
         }
+    }
+
+    fun onClickCardToAnki(term: String) {
+        _uiState.update {
+            it.copy(
+                ankiFieldsErrorMessage = null
+                )
+        }
+
+        viewModelScope.launch {
+            val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first() ?: return@launch
+            val fieldsMap: Map<String, String> = AnkiFieldStore.getFields(getApplication(), selectedModel).first()
+            try {
+                val ankiFields = getMarkerAnkiFields(term, fieldsMap)
+                val fields = buildAnkiFields(fieldsMap, ankiFields)
+
+                ankiFields.audioMedia.forEach {
+                    if (it.ankiFilename == null || it.content == null) return@forEach
+                    storeMediaFile(it.ankiFilename, it.content)
+                }
+                ankiFields.dictionaryMedia.forEach {
+                    if (it.ankiFilename == null || it.content == null) return@forEach
+                    storeMediaFile(it.ankiFilename, it.content)
+                }
+
+                addNote(fields)
+
+            } catch (e: Exception) {
+                Log.e("Yomitan", "Failed to resolve Anki fields", e)
+                _uiState.update {
+                    it.copy(
+                        ankiFieldsErrorMessage = e.message ?: "Failed to resolve Anki fields"
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun addNote(ankiFields: Map<String,String>) {
+        val url = getAnkiConnectUrl()
+        val selectedDeckName = AnkiFieldStore.getSelectedDeck(getApplication()).first()
+            ?: throw IllegalStateException("No Anki deck selected")
+        val selectedModelName = AnkiFieldStore.getSelectedModel(getApplication()).first()
+            ?: throw IllegalStateException("No Anki note type selected")
+        val note = JSONObject().apply {
+            put("deckName", selectedDeckName)
+            put("modelName", selectedModelName)
+            put("fields", JSONObject(ankiFields))
+            put("options", JSONObject().apply {
+                put("allowDuplicate", true)
+            })
+            put("tags", JSONArray().put("GSMCompanion"))
+        }
+        val body = JSONObject().apply {
+            put("action", "addNote")
+            put("version", 5)
+            put("params", JSONObject().put("note", note))
+        }.toString()
+
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .post(body.toRequestBody())
+            .build()
+
+        withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val error = JSONObject(response.body.string()).opt("error")
+                Log.d("Anki", "error: $error")
+                if (error != null && error != JSONObject.NULL) {
+                    throw IllegalStateException("addNote Failed $error")
+                }
+            }
+        }
 
     }
+
+    private val markerPattern = Regex("""\{([\p{L}\p{N}_-]+)\}""")
+
+    fun buildAnkiFields(fieldsMap: Map<String, String>, ankiFields: AnkiFieldsResponse)
+    : Map<String, String>{
+        val rendered = ankiFields.fields.firstOrNull() ?: return emptyMap()
+
+        val originalSentence = selectionContext?.originalSentence
+            ?: throw IllegalStateException("Failed to load sentence")
+        val offset = selectionContext?.offset
+            ?: throw IllegalStateException("Failed to load target offset")
+        val originalTextLength = selectionContext?.originalTextLength
+            ?: throw IllegalStateException("Failed to load target length")
+
+        val localMarkers = mapOf(
+            "sentence" to originalSentence,
+            "cloze-prefix" to originalSentence.substring(0, offset),
+            "cloze-body" to originalSentence.substring(offset, offset + originalTextLength),
+            "cloze-suffix" to originalSentence.substring(offset + originalTextLength)
+        )
+
+        val merged = rendered + localMarkers
+        return fieldsMap.mapValues { (_, template) ->
+            markerPattern.replace(template) { match ->
+                merged[match.groupValues[1]] ?: ""
+            }
+        }
+    }
+
+    suspend fun getMarkerAnkiFields(term: String, fieldsMap: Map<String, String>): AnkiFieldsResponse {
+        val url = getYomitanUrl()
+
+        val markers = parseMarkers(fieldsMap)
+        val body = JSONObject().apply {
+            put("text", term)
+            put("type", "term")
+            put("markers", markers)
+            put("maxEntries", 2)
+            put("includeMedia", true)
+        }.toString()
+
+        val request = okhttp3.Request.Builder()
+            .url("$url/ankiFields")
+            .post(body.toRequestBody())
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body.string()
+                val json = Json {
+                    ignoreUnknownKeys = true
+                    isLenient = true
+                }
+                json.decodeFromString<AnkiFieldsResponse>(responseBody)
+            }
+        }
+    }
+
+    private suspend fun storeMediaFile(filename: String, base64Content: String) {
+        val ankiConnectUrl = getAnkiConnectUrl()
+        val body = JSONObject().apply {
+            put("action", "storeMediaFile")
+            put("version", 5)
+            put("params", JSONObject().apply {
+                put("filename", filename)
+                put("data", base64Content)
+            })
+        }.toString()
+
+        val request = okhttp3.Request.Builder()
+            .url(ankiConnectUrl)
+            .post(body.toRequestBody())
+            .build()
+        withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val error = JSONObject(response.body.string()).opt("error")
+                if (error != null && error != JSONObject.NULL) {
+                    throw IllegalStateException("storeMediaFile Failed: $error")
+                }
+            }
+        }
+    }
+
+    private fun parseMarkers(fieldsMap: Map<String, String>): JSONArray =
+        JSONArray(
+            fieldsMap.values
+                .flatMap { field -> markerPattern.findAll(field).map { it.groupValues[1] } }
+                .distinct()
+        )
 
 }

@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,7 +23,9 @@ data class AnkiConfigsUiState (
     val selectedModel: String? = null,
     val fieldNames: List<String> = emptyList(),
     val fieldValues: Map<String, String> = emptyMap(),
-    val isLoadingModels: Boolean = false,
+    val deckNames: List<String> = emptyList(),
+    val selectedDeck: String? = null,
+    val isLoadingModelsDecks: Boolean = false,
     val isLoadingFields: Boolean = false,
     val errorMessage: String? = null
     )
@@ -36,8 +39,25 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
     private var fieldFetchAttemptId = 0
 
     suspend fun saveFields() {
-        val model = _uiState.value.selectedModel ?: return
-        AnkiFieldStore.save(getApplication(), model, _uiState.value.fieldValues)
+        val model = _uiState.value.selectedModel
+        val deck = _uiState.value.selectedDeck
+        if (model == null || deck == null) {
+            _uiState.update {
+                it.copy(
+                    errorMessage = "Select a note type and a deck before saving"
+                )
+            }
+            return
+        }
+        AnkiFieldStore.save(getApplication(),
+            model,
+            deck,
+            _uiState.value.fieldValues)
+        _uiState.update {
+            it.copy(
+                errorMessage = null
+            )
+        }
     }
 
     fun loadFields(modelName: String) {
@@ -62,6 +82,14 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         }
     }
 
+    fun selectDeck(deckName : String) {
+        _uiState.update {
+            it.copy (
+                selectedDeck = deckName
+            )
+        }
+    }
+
     fun setFieldValue(fieldName: String, value: String) {
         _uiState.update {
             it.copy(
@@ -80,18 +108,23 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
         return APIConfigs.getURL(config, PortName.Yomitan)
     }
 
-    suspend fun getModelNames(){
+    suspend fun getModelDeckNames(){
         val ankiConnectUrl = getAnkiConnectUrl()
         val currentModelFetchAttemptId = ++modelFetchAttemptId
         _uiState.update {
             it.copy(
-                isLoadingModels = true,
+                isLoadingModelsDecks = true,
                 errorMessage = null
             )
         }
+        val actions = JSONArray().apply {
+            put(JSONObject().put("action","deckNames"))
+            put (JSONObject().put("action", "modelNames"))
+         }
         val body = JSONObject().apply {
-            put("action", "modelNames")
+            put("action", "multi")
             put("version", 5)
+            put("params", JSONObject().put("actions", actions))
         }.toString()
         val request = Request.Builder()
             .url(ankiConnectUrl)
@@ -103,12 +136,17 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()
                     val result = JSONObject(body).getJSONArray("result")
-                    val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first()
+                    val deckNames = result.getJSONArray(0)
+                    val modelNames = result.getJSONArray(1)
+                    val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).firstOrNull() ?: modelNames.getString(0)
+                    val selectedDeck = AnkiFieldStore.getSelectedDeck(getApplication()).firstOrNull() ?: modelNames.getString(0)
                     if (currentModelFetchAttemptId == modelFetchAttemptId) {
                         _uiState.update {
                             it.copy(
-                                modelNames = List(result.length()) { i -> result.getString(i) },
-                                selectedModel = selectedModel
+                                deckNames = List(deckNames.length()) { i -> deckNames.getString(i) },
+                                modelNames = List(modelNames.length()) { i -> modelNames.getString(i) },
+                                selectedModel = selectedModel,
+                                selectedDeck = selectedDeck
                             )
                         }
                     }
@@ -125,7 +163,7 @@ class AnkiConfigsViewModel(application : Application) : AndroidViewModel(applica
             if (currentModelFetchAttemptId == modelFetchAttemptId) {
                 _uiState.update {
                     it.copy(
-                        isLoadingModels = false
+                        isLoadingModelsDecks = false
                     )
                 }
             }

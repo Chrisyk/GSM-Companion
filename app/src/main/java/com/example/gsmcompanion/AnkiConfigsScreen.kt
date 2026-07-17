@@ -46,7 +46,7 @@ fun AnkiConfigsScreen(
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
-        viewModel.getModelNames()
+        viewModel.getModelDeckNames()
     }
 
     LaunchedEffect(uiState.selectedModel) {
@@ -91,7 +91,7 @@ fun AnkiConfigsScreen(
                     Icon(Icons.Default.Done, contentDescription = "Save")
                 }
 
-                if (uiState.isLoadingModels) {
+                if (uiState.isLoadingModelsDecks) {
                     Text(modifier = Modifier
                         .padding(16.dp),
                         text = "Loading models..."
@@ -103,6 +103,33 @@ fun AnkiConfigsScreen(
                     )
                 }
 
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    val selectedDeck = uiState.selectedDeck
+                    Text("Selected deck: ${selectedDeck ?: "None"}")
+                }
+
+                if (uiState.isLoadingModelsDecks) {
+                    Text(modifier = Modifier
+                        .padding(16.dp),
+                        text = "Loading decks..."
+                    )
+                } else {
+                    DeckSelectorMenu(
+                        deckNames = uiState.deckNames,
+                        onDeckSelected = viewModel::selectDeck
+                    )
+                }
             }
 
             Column(
@@ -142,6 +169,37 @@ fun ModelTextField(
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+@Composable
+fun DeckSelectorMenu(
+    deckNames: List<String>,
+    onDeckSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .padding(16.dp)
+    ) {
+        IconButton(onClick = { expanded = !expanded }) {
+            Icon(Icons.Default.MoreVert, contentDescription = "Select deck")
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            deckNames.forEach { deckName ->
+                DropdownMenuItem(
+                    text = { Text(deckName) },
+                    onClick = {
+                        onDeckSelected(deckName)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 
