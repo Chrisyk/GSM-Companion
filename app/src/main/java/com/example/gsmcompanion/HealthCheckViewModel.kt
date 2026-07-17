@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import kotlin.time.Duration.Companion.milliseconds
 
 class HealthCheckViewModel(application: Application) : AndroidViewModel(application) {
@@ -62,9 +63,12 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
 
     fun checkHealthStatus(url: String, key: PortName) {
         try {
-            val request = Request.Builder()
-                .url(url)
-                .build()
+            val request = if (key == PortName.Yomitan) {
+                Request.Builder()
+                    .url("$url/yomitanVersion")
+                    .post(ByteArray(0).toRequestBody())
+                    .build()
+            } else { Request.Builder().url(url).build() }
             client.newCall(request).execute().use { response ->
                 updateStatus(
                     key,
