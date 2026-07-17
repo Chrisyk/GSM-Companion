@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -152,14 +153,17 @@ fun StructuredContent(node: JsonElement?) {
                     node.forEach { StructuredContent(it) }
                 }
             } else {
-                FlowRow { node.forEach { StructuredContent(it) } }
+                FlowRow(itemVerticalAlignment = Alignment.Bottom) {
+                    node.forEach { StructuredContent(it) }
+                }
             }
 
         is JsonObject -> RenderElement(node)
         else -> {}
     }
 }
-
+private fun JsonObject.dataContent(): String? =
+    this["data"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
 @Composable
 private fun RenderElement(node: JsonObject) {
     val tag = node["tag"]?.jsonPrimitive?.contentOrNull
@@ -184,7 +188,19 @@ private fun RenderElement(node: JsonObject) {
             }
         }
 
-        "div" -> Column(modifier = Modifier.fillMaxWidth()) { StructuredContent(child) }
+        "div" ->
+            if (node.dataContent() == "example-sentence") {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth().padding(end = 4.dp, top = 8.dp, bottom = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    ) { StructuredContent(child) }
+                }
+            } else Column(modifier = Modifier.fillMaxWidth())
+        { StructuredContent(child) }
         "span" -> SpanContent(node)
         else -> StructuredContent(child)
     }
@@ -247,7 +263,7 @@ private fun RubyContent(obj: JsonElement?) {
         }
     }
     walk(obj)
-    Column {
+    Column (horizontalAlignment = Alignment.CenterHorizontally){
         Text(
             text = reading.toString(),
             fontSize = 9.sp,

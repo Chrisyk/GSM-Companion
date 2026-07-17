@@ -218,7 +218,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
             it.copy(
                 selectedSentenceIndex = selectedSentenceIndex,
                 offset = charOffset,
-                originalTextLength = null
+                originalTextLength = 1
             )
         }
 
