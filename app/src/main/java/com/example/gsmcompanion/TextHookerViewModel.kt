@@ -28,7 +28,8 @@ data class TextHookerUiState(
     val ankiFieldsErrorMessage: String? = null,
     val selectedSentenceIndex: Int? = null,
     val offset: Int? = null,
-    val originalTextLength: Int? = null
+    val originalTextLength: Int? = null,
+    val addingTerm: String? = null
 )
 
 private data class SelectionContext(
@@ -284,7 +285,8 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     fun onClickCardToAnki(term: String) {
         _uiState.update {
             it.copy(
-                ankiFieldsErrorMessage = null
+                ankiFieldsErrorMessage = null,
+                addingTerm = term
             )
         }
 
@@ -315,7 +317,10 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                         ankiFieldsErrorMessage = e.message ?: "Failed to resolve Anki fields"
                     )
                 }
+            } finally {
+                _uiState.update { it.copy(addingTerm = null) }
             }
+
         }
     }
 

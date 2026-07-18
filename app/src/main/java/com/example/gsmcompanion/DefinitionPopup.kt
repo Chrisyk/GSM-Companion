@@ -15,8 +15,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -43,6 +45,7 @@ import kotlinx.serialization.json.jsonPrimitive
 fun DefinitionBottomSheet(
     response: TermEntriesResponse?,
     errorMessage: String?,
+    addingTerm: String?,
     onDismiss: () -> Unit,
     onAddCard: (String) -> Unit
 ) {
@@ -75,7 +78,7 @@ fun DefinitionBottomSheet(
                     .padding(bottom = 24.dp)
             ) {
                 items(dictionaryEntries) { dictionaryEntry ->
-                    DictionaryEntryCard(dictionaryEntry, onAddCard)
+                    DictionaryEntryCard(dictionaryEntry, addingTerm, onAddCard)
                     HorizontalDivider( modifier = Modifier.padding(vertical = 8.dp))
                 }
             }
@@ -86,6 +89,7 @@ fun DefinitionBottomSheet(
 @Composable
 fun DictionaryEntryCard(
     dictionaryEntry: DictionaryEntry,
+    addingTerm: String?,
     onAddCard: (String) -> Unit
 ) {
     Column (
@@ -108,9 +112,17 @@ fun DictionaryEntryCard(
                         style = MaterialTheme.typography.headlineSmall
                     )
                 }
+
                 Button(
                     onClick = { onAddCard(hw.term) },
-                ) { Text("Add to Anki") }
+                    enabled = addingTerm == null
+                ) { if (addingTerm == hw.term) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = LocalContentColor.current
+                    )
+                } else Text("Add to Anki") }
             }
 
             hw.reading?.let {

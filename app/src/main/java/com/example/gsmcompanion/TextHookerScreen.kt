@@ -98,8 +98,9 @@ fun TextHookerScreen(
             DefinitionBottomSheet(
                 response = uiState.termEntriesResponse,
                 errorMessage = uiState.termEntriesErrorMessage,
+                addingTerm = uiState.addingTerm,
                 onDismiss = viewModel::clearTermEntries,
-                onAddCard = viewModel::onClickCardToAnki
+                onAddCard = viewModel::onClickCardToAnki,
             )
         }
     }
