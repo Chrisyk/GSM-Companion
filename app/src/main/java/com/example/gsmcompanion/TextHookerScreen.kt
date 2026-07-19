@@ -1,5 +1,6 @@
 package com.example.gsmcompanion
 
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -67,6 +70,12 @@ fun TextHookerScreen(
             viewModel.disconnect()
         }
     }
+    LaunchedEffect(uiState.ankiFieldsMessage) {
+        if (uiState.ankiFieldsMessage != null) {
+            Toast.makeText(context, uiState.ankiFieldsMessage, Toast.LENGTH_SHORT).show()
+            viewModel.consumeAnkiError()
+        }
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -79,7 +88,6 @@ fun TextHookerScreen(
         bottomBar = {
             BottomBar(navController)
         }
-
     ) { innerPadding ->
         Column(
             modifier = Modifier

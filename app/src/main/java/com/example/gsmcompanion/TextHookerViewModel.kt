@@ -25,7 +25,7 @@ data class TextHookerUiState(
     val textHookerErrorMessage: String? = null,
     val termEntriesResponse: TermEntriesResponse? = null,
     val termEntriesErrorMessage: String? = null,
-    val ankiFieldsErrorMessage: String? = null,
+    val ankiFieldsMessage: String? = null,
     val selectedSentenceIndex: Int? = null,
     val offset: Int? = null,
     val originalTextLength: Int? = null,
@@ -285,7 +285,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     fun onClickCardToAnki(term: String) {
         _uiState.update {
             it.copy(
-                ankiFieldsErrorMessage = null,
+                ankiFieldsMessage = null,
                 addingTerm = term
             )
         }
@@ -314,7 +314,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 Log.e("Yomitan", "Failed to resolve Anki fields", e)
                 _uiState.update {
                     it.copy(
-                        ankiFieldsErrorMessage = e.message ?: "Failed to resolve Anki fields"
+                        ankiFieldsMessage = e.message ?: "Failed to resolve Anki fields"
                     )
                 }
             } finally {
@@ -352,11 +352,19 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
 
         withContext(Dispatchers.IO) {
             client.newCall(request).execute().use { response ->
-                val error = JSONObject(response.body.string()).opt("error")
+                val body = JSONObject(response.body.string())
+                val error = body.opt("error")
+                val result = body.opt("result")
                 Log.d("Anki", "error: $error")
                 if (error != null && error != JSONObject.NULL) {
                     throw IllegalStateException("addNote Failed $error")
-                }
+                } else (
+                    _uiState.update {
+                        it.copy (
+                            ankiFieldsMessage = "Note Added Successfully: $result"
+                        )
+                    }
+                )
             }
         }
 
@@ -453,5 +461,13 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 .flatMap { field -> markerPattern.findAll(field).map { it.groupValues[1] } }
                 .distinct()
         )
+
+    fun consumeAnkiError() {
+        _uiState.update {
+            it.copy(
+                ankiFieldsMessage = null
+            )
+        }
+    }
 
 }
