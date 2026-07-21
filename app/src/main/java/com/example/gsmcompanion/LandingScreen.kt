@@ -1,6 +1,7 @@
 package com.example.gsmcompanion
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,8 +61,16 @@ fun LandingScreen(
     viewModel: LandingViewModel = viewModel()
 ) {
     val state by viewModel.settingsState.collectAsState()
-
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(uiState.dataStoreMessage) {
+        if (uiState.dataStoreMessage != null) {
+            Toast.makeText(context, uiState.dataStoreMessage, Toast.LENGTH_SHORT).show()
+            viewModel.consumeDataStoreMessage()
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

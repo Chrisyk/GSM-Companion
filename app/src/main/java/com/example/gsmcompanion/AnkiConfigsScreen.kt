@@ -1,5 +1,6 @@
 package com.example.gsmcompanion
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -45,8 +47,15 @@ fun AnkiConfigsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.getModelDeckNames()
+    }
+    LaunchedEffect(uiState.dataStoreMessage) {
+        if (uiState.dataStoreMessage != null) {
+            Toast.makeText(context, uiState.dataStoreMessage, Toast.LENGTH_SHORT).show()
+            viewModel.consumeDataStoreMessage()
+        }
     }
 
     LaunchedEffect(uiState.selectedModel) {

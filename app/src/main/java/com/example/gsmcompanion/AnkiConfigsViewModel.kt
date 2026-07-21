@@ -26,6 +26,7 @@ data class AnkiConfigsUiState(
     val selectedDeck: String? = null,
     val isLoadingModelsDecks: Boolean = false,
     val isLoadingFields: Boolean = false,
+    val dataStoreMessage: String? = null,
     val errorMessage: String? = null
 )
 
@@ -56,7 +57,16 @@ class AnkiConfigsViewModel(application: Application) : AndroidViewModel(applicat
         )
         _uiState.update {
             it.copy(
+                dataStoreMessage = "Saved Successfully",
                 errorMessage = null
+            )
+        }
+    }
+
+    fun consumeDataStoreMessage() {
+        _uiState.update {
+            it.copy(
+                dataStoreMessage = null
             )
         }
     }
