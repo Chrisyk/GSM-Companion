@@ -102,6 +102,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     private val _uiState = MutableStateFlow(TextHookerUiState())
     val uiState = _uiState.asStateFlow()
     private var connectionAttemptId = 0
+    private var termsRequestId = 0
     private var currentUrl: String? = null
     private var selectionContext: SelectionContext? = null
     fun connect(url: String) {
@@ -231,6 +232,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     suspend fun getTermEntries(subsentence: String) {
+        val requestId = ++termsRequestId
         val url = getYomitanUrl()
         val body = JSONObject().apply {
             put("term", subsentence)
@@ -267,11 +269,12 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                     _uiState.update {
                         it.copy(
                             termEntriesResponse = parsed,
-                            termEntriesErrorMessage = null
+                            termEntriesErrorMessage = null,
+                            duplicateTermsIds = emptyMap()
                         )
                     }
 
-                    getExistingNotesId()
+                    getExistingNotesId(requestId)
                 }
             } catch (e: Exception) {
                 Log.e("Yomitan", "Failed to parse term entries", e)
@@ -293,7 +296,6 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 addingTerm = term
             )
         }
-
         viewModelScope.launch {
             val selectedModel =
                 AnkiFieldStore.getSelectedModel(getApplication()).first() ?: return@launch
@@ -312,7 +314,10 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                     storeMediaFile(it.ankiFilename, it.content)
                 }
 
-                addNote(fields)
+                val noteId = addNote(fields)
+                _uiState.update {
+                    it.copy(duplicateTermsIds = it.duplicateTermsIds + mapOf(term to noteId))
+                }
 
             } catch (e: Exception) {
                 Log.e("Yomitan", "Failed to resolve Anki fields", e)
@@ -328,7 +333,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    suspend fun addNote(ankiFields: Map<String, String>) {
+    suspend fun addNote(ankiFields: Map<String, String>): Long {
         val url = getAnkiConnectUrl()
         val selectedDeckName = AnkiFieldStore.getSelectedDeck(getApplication()).first()
             ?: throw IllegalStateException("No Anki deck selected")
@@ -354,21 +359,21 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
             .post(body.toRequestBody())
             .build()
 
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             client.newCall(request).execute().use { response ->
                 val body = JSONObject(response.body.string())
                 val error = body.opt("error")
-                val result = body.opt("result")
                 Log.d("Anki", "error: $error")
                 if (error != null && error != JSONObject.NULL) {
                     throw IllegalStateException("addNote Failed $error")
-                } else (
-                        _uiState.update {
-                            it.copy(
-                                ankiFieldsMessage = "Note Added Successfully: $result"
-                            )
-                        }
-                        )
+                }
+                val noteId = body.getLong("result")
+                _uiState.update {
+                    it.copy(
+                        ankiFieldsMessage = "Note Added Successfully: $noteId"
+                    )
+                }
+                noteId
             }
         }
 
@@ -477,7 +482,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun getExistingNotesId() {
+    fun getExistingNotesId(requestId: Int = termsRequestId) {
         viewModelScope.launch {
             try {
                 val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first()
@@ -487,10 +492,12 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
 
                 val duplicateTermsIds = findDuplicateTermsIds(key)
 
-                _uiState.update {
-                    it.copy(
-                        duplicateTermsIds = duplicateTermsIds
-                    )
+                if (requestId == termsRequestId) {
+                    _uiState.update {
+                        it.copy(
+                            duplicateTermsIds = it.duplicateTermsIds + duplicateTermsIds
+                        )
+                    }
                 }
 
 
