@@ -14,10 +14,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -48,7 +52,8 @@ fun DefinitionBottomSheet(
     addingTerm: String?,
     duplicateTermsId: Map<String, Long>,
     onDismiss: () -> Unit,
-    onAddCard: (String) -> Unit
+    onAddCard: (String) -> Unit,
+    openAnkiCard: (Long) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
@@ -79,7 +84,11 @@ fun DefinitionBottomSheet(
                     .padding(bottom = 24.dp)
             ) {
                 items(dictionaryEntries) { dictionaryEntry ->
-                    DictionaryEntryCard(dictionaryEntry, addingTerm, onAddCard, duplicateTermsId)
+                    DictionaryEntryCard(dictionaryEntry,
+                        addingTerm,
+                        onAddCard,
+                        duplicateTermsId,
+                        openAnkiCard)
                     HorizontalDivider( modifier = Modifier.padding(vertical = 8.dp))
                 }
             }
@@ -92,7 +101,8 @@ fun DictionaryEntryCard(
     dictionaryEntry: DictionaryEntry,
     addingTerm: String?,
     onAddCard: (String) -> Unit,
-    getExistingNoteId: Map<String, Long>
+    duplicateTermsId: Map<String, Long>,
+    openAnkiCard: (Long) -> Unit
 ) {
     Column (
       modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -114,22 +124,26 @@ fun DictionaryEntryCard(
                         style = MaterialTheme.typography.headlineSmall
                     )
                 }
+                Row (
 
-                Button(
-                    onClick = { onAddCard(hw.term) },
-                    enabled = addingTerm == null
-                ) { if (addingTerm == hw.term) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = LocalContentColor.current
-                    )
-                } else {
-                    if (getExistingNoteId[hw.term] != null) {
-                        Text("Repeated")
-                    } else Text("Add to Anki")
-
-                } }
+                ) {
+                    duplicateTermsId[hw.term]?.let { noteId ->
+                        IconButton(
+                            onClick = { openAnkiCard(noteId) }
+                        ) { Icon(Icons.Default.AccountBox, "Open Anki")}
+                    }
+                    Button(
+                        onClick = { onAddCard(hw.term) },
+                        enabled = addingTerm == null
+                    ) { if (addingTerm == hw.term) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = LocalContentColor.current
+                        )
+                    } else { Text("Add to Anki") }
+                    }
+                }
             }
 
             hw.reading?.let {

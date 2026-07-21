@@ -110,6 +110,7 @@ fun TextHookerScreen(
                 duplicateTermsId = uiState.duplicateTermsIds,
                 onDismiss = viewModel::clearTermEntries,
                 onAddCard = viewModel::onClickCardToAnki,
+                openAnkiCard = viewModel::openAnkiCard
             )
         }
     }

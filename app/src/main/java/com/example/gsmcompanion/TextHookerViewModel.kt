@@ -21,7 +21,7 @@ import org.json.JSONObject
 data class TextHookerUiState(
     val connectionStatus: ConnectionStatus =
         ConnectionStatus.Disconnected,
-    val sentences: List<String> = listOf("今日は散歩しましょう", "官僚は新しい法案を提案した"),
+    val sentences: List<String> = emptyList(),
     val textHookerErrorMessage: String? = null,
     val termEntriesResponse: TermEntriesResponse? = null,
     val termEntriesErrorMessage: String? = null,
@@ -548,6 +548,39 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
         return duplicatesMap
+    }
+
+    fun openAnkiCard(noteId: Long) {
+        viewModelScope.launch {
+            val body = JSONObject().apply {
+                put("action", "guiBrowse")
+                put("version", 6)
+                put("params", JSONObject().put("query", "nid:$noteId"))
+            }.toString()
+
+            val request = okhttp3.Request.Builder()
+                .url(getAnkiConnectUrl())
+                .post(body.toRequestBody())
+                .build()
+            Log.d("Anki GUI request body: ", body)
+            try {
+                withContext(Dispatchers.IO) {
+                    client.newCall(request).execute().use { response ->
+                        val responseBody = response.body.string()
+                        val error = JSONObject(responseBody).opt("error")
+                        if (error != null && error != JSONObject.NULL) {
+                            throw IllegalStateException("guiBrowse Failed: $error")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        ankiFieldsMessage = e.message ?: "Failed to open Anki note"
+                    )
+                }
+            }
+        }
     }
 
     private fun parseMarkers(fieldsMap: Map<String, String>): JSONArray =
