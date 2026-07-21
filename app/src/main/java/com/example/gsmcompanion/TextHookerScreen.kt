@@ -107,6 +107,7 @@ fun TextHookerScreen(
                 response = uiState.termEntriesResponse,
                 errorMessage = uiState.termEntriesErrorMessage,
                 addingTerm = uiState.addingTerm,
+                duplicateTermsId = uiState.duplicateTermsIds,
                 onDismiss = viewModel::clearTermEntries,
                 onAddCard = viewModel::onClickCardToAnki,
             )

@@ -201,12 +201,17 @@ class AnkiConfigsViewModel(application: Application) : AndroidViewModel(applicat
                 client.newCall(request).execute().use { response ->
                     val body = response.body.string()
                     val result = JSONObject(body).getJSONArray("result")
+                    val fieldNames = List(result.length()) { i -> result.getString(i) }
+
                     if (fieldFetchAttemptId == currentFieldFetchAttemptId) {
                         _uiState.update {
                             it.copy(
-                                fieldNames = List(result.length()) { i -> result.getString(i) }
+                                fieldNames = fieldNames
                             )
                         }
+                    }
+                    if (fieldNames.isNotEmpty()) {
+                        AnkiFieldStore.saveFirstField(getApplication(), modelName, fieldNames[0])
                     }
                 }
             } catch (e: Exception) {

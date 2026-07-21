@@ -26,6 +26,7 @@ data class TextHookerUiState(
     val termEntriesResponse: TermEntriesResponse? = null,
     val termEntriesErrorMessage: String? = null,
     val ankiFieldsMessage: String? = null,
+    val duplicateTermsIds: Map<String, Long> = emptyMap(),
     val selectedSentenceIndex: Int? = null,
     val offset: Int? = null,
     val originalTextLength: Int? = null,
@@ -175,7 +176,8 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 termEntriesResponse = null,
                 termEntriesErrorMessage = null,
                 offset = null,
-                originalTextLength = null
+                originalTextLength = null,
+                duplicateTermsIds = emptyMap()
             )
         }
     }
@@ -268,6 +270,8 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                             termEntriesErrorMessage = null
                         )
                     }
+
+                    getExistingNotesId()
                 }
             } catch (e: Exception) {
                 Log.e("Yomitan", "Failed to parse term entries", e)
@@ -453,6 +457,154 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 }
             }
         }
+    }
+
+    private suspend fun getFirstFieldName(model: String): String {
+        val body = JSONObject().apply {
+            put("action", "modelFieldNames")
+            put("version", 6)
+            put("params", JSONObject().put("modelName", model))
+        }.toString()
+        val request = okhttp3.Request.Builder()
+            .url(getAnkiConnectUrl()).post(body.toRequestBody()).build()
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val result = JSONObject(response.body.string()).optJSONArray("result")
+                    ?: throw IllegalStateException("Could not get field names")
+                if (result.length() == 0) throw IllegalStateException("Model has no fields")
+                result.getString(0)
+            }
+        }
+    }
+
+    fun getExistingNotesId() {
+        val terms = _uiState.value.termEntriesResponse?.dictionaryEntries?.map { hw ->
+            hw.headwords.firstOrNull()?.term }
+        viewModelScope.launch {
+            try {
+                val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first()
+                    ?: throw IllegalStateException("No Anki model selected")
+                val key = AnkiFieldStore.getFirstField(getApplication(), selectedModel).first()
+                    ?: getFirstFieldName(selectedModel)
+
+                val duplicateTermsIndex = findDuplicateTermsIndex(terms, key).mapNotNull {
+                    terms?.get(it)
+                }
+
+                val duplicateTermsIds = findDuplicateTermsIds(duplicateTermsIndex, key)
+
+                _uiState.update {
+                    it.copy(
+                        duplicateTermsIds = duplicateTermsIds
+                    )
+                }
+
+
+            } catch (e: Exception) {
+                Log.d("Anki", "Failed to fetch existing notes id")
+                _uiState.update {
+                    it.copy(
+                        ankiFieldsMessage = e.message
+                    )
+                }
+            }
+        }
+
+    }
+
+    suspend fun findDuplicateTermsIds(terms: List<String>, key: String): Map<String, Long> {
+
+        val duplicatesMap: MutableMap<String, Long> = mutableMapOf()
+
+        val actions = JSONArray().apply {
+            terms.forEach { term ->
+                put (JSONObject().apply {
+                    put("action", "findNotes")
+                    put("params", JSONObject().put(
+                        "query", "$key:\"$term\""
+                    ))
+                })
+            }
+        }
+
+        val body = JSONObject().apply {
+            put("action", "multi")
+            put("version", 6)
+            put ("params", JSONObject().put("actions", actions))
+        }.toString()
+
+        val request = okhttp3.Request.Builder()
+            .url(getAnkiConnectUrl())
+            .post(body.toRequestBody())
+            .build()
+
+        withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body.string()
+                val result = JSONObject(responseBody).optJSONArray("result") ?: return@use
+                List(result.length()) { index ->
+                    val ids = result.optJSONArray(index)
+                    if (ids != null && ids.length() > 0) {
+                        duplicatesMap[terms[index]] = ids.getLong(0)
+                    }
+                }
+            }
+        }
+        return duplicatesMap
+    }
+
+    suspend fun findDuplicateTermsIndex(terms: List<String?>?, key: String): List<Int> {
+        if (terms.isNullOrEmpty()) throw IllegalStateException("No Terms Found")
+        val duplicateTermsIndex = mutableListOf<Int>()
+
+
+        val selectedDeckName = AnkiFieldStore.getSelectedDeck(getApplication()).first()
+            ?: throw IllegalStateException("No Anki deck selected")
+        val selectedModelName = AnkiFieldStore.getSelectedModel(getApplication()).first()
+            ?: throw IllegalStateException("No Anki note type selected")
+
+        val notes = JSONArray().apply {
+            terms.forEach { term ->
+                put (JSONObject().apply {
+                    put("deckName", selectedDeckName)
+                    put("modelName", selectedModelName)
+                    put("fields", JSONObject().put(key, term))
+                    put("options", JSONObject().apply {
+                        put("allowDuplicate", false)
+                        put("duplicateScope", "collection")
+                    })
+                    put("tags", JSONArray().put("GSMCompanion"))
+                })
+            }
+        }
+
+        val body = JSONObject().apply {
+            put("action", "canAddNotesWithErrorDetail")
+            put("version", 6)
+            put("params", JSONObject().put("notes", notes))
+        }.toString()
+
+        val request = okhttp3.Request.Builder()
+            .url(getAnkiConnectUrl())
+            .post(body.toRequestBody())
+            .build()
+
+        withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val bodyResponse = response.body.string()
+                val result = JSONObject(bodyResponse).optJSONArray("result")
+                if (result != null) {
+                    List(result.length()) { index ->
+                        val jsonObject = result.getJSONObject(index)
+                        val canAdd = jsonObject.optBoolean("canAdd", true)
+                        if (!canAdd && jsonObject.optString("error").contains("duplicate")) {
+                            duplicateTermsIndex.add(index)
+                        }
+                    }
+                }
+            }
+        }
+        return duplicateTermsIndex
     }
 
     private fun parseMarkers(fieldsMap: Map<String, String>): JSONArray =

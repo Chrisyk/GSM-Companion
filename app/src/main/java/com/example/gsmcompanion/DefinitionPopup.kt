@@ -46,6 +46,7 @@ fun DefinitionBottomSheet(
     response: TermEntriesResponse?,
     errorMessage: String?,
     addingTerm: String?,
+    duplicateTermsId: Map<String, Long>,
     onDismiss: () -> Unit,
     onAddCard: (String) -> Unit
 ) {
@@ -78,7 +79,7 @@ fun DefinitionBottomSheet(
                     .padding(bottom = 24.dp)
             ) {
                 items(dictionaryEntries) { dictionaryEntry ->
-                    DictionaryEntryCard(dictionaryEntry, addingTerm, onAddCard)
+                    DictionaryEntryCard(dictionaryEntry, addingTerm, onAddCard, duplicateTermsId)
                     HorizontalDivider( modifier = Modifier.padding(vertical = 8.dp))
                 }
             }
@@ -90,7 +91,8 @@ fun DefinitionBottomSheet(
 fun DictionaryEntryCard(
     dictionaryEntry: DictionaryEntry,
     addingTerm: String?,
-    onAddCard: (String) -> Unit
+    onAddCard: (String) -> Unit,
+    getExistingNoteId: Map<String, Long>
 ) {
     Column (
       modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -122,7 +124,12 @@ fun DictionaryEntryCard(
                         strokeWidth = 2.dp,
                         color = LocalContentColor.current
                     )
-                } else Text("Add to Anki") }
+                } else {
+                    if (getExistingNoteId[hw.term] != null) {
+                        Text("Repeated")
+                    } else Text("Add to Anki")
+
+                } }
             }
 
             hw.reading?.let {
