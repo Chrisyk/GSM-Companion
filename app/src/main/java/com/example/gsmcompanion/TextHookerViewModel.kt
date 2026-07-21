@@ -478,8 +478,6 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun getExistingNotesId() {
-        val terms = _uiState.value.termEntriesResponse?.dictionaryEntries?.map { hw ->
-            hw.headwords.firstOrNull()?.term }
         viewModelScope.launch {
             try {
                 val selectedModel = AnkiFieldStore.getSelectedModel(getApplication()).first()
@@ -487,11 +485,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 val key = AnkiFieldStore.getFirstField(getApplication(), selectedModel).first()
                     ?: getFirstFieldName(selectedModel)
 
-                val duplicateTermsIndex = findDuplicateTermsIndex(terms, key).mapNotNull {
-                    terms?.get(it)
-                }
-
-                val duplicateTermsIds = findDuplicateTermsIds(duplicateTermsIndex, key)
+                val duplicateTermsIds = findDuplicateTermsIds(key)
 
                 _uiState.update {
                     it.copy(
@@ -512,8 +506,11 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
 
     }
 
-    suspend fun findDuplicateTermsIds(terms: List<String>, key: String): Map<String, Long> {
-
+    suspend fun findDuplicateTermsIds(key: String): Map<String, Long> {
+        val terms = _uiState.value.termEntriesResponse?.dictionaryEntries?.mapNotNull { hw ->
+            hw.headwords.firstOrNull()?.term
+        } ?:
+            throw IllegalStateException("No Terms Found")
         val duplicatesMap: MutableMap<String, Long> = mutableMapOf()
 
         val actions = JSONArray().apply {
@@ -551,60 +548,6 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
         return duplicatesMap
-    }
-
-    suspend fun findDuplicateTermsIndex(terms: List<String?>?, key: String): List<Int> {
-        if (terms.isNullOrEmpty()) throw IllegalStateException("No Terms Found")
-        val duplicateTermsIndex = mutableListOf<Int>()
-
-
-        val selectedDeckName = AnkiFieldStore.getSelectedDeck(getApplication()).first()
-            ?: throw IllegalStateException("No Anki deck selected")
-        val selectedModelName = AnkiFieldStore.getSelectedModel(getApplication()).first()
-            ?: throw IllegalStateException("No Anki note type selected")
-
-        val notes = JSONArray().apply {
-            terms.forEach { term ->
-                put (JSONObject().apply {
-                    put("deckName", selectedDeckName)
-                    put("modelName", selectedModelName)
-                    put("fields", JSONObject().put(key, term))
-                    put("options", JSONObject().apply {
-                        put("allowDuplicate", false)
-                        put("duplicateScope", "collection")
-                    })
-                    put("tags", JSONArray().put("GSMCompanion"))
-                })
-            }
-        }
-
-        val body = JSONObject().apply {
-            put("action", "canAddNotesWithErrorDetail")
-            put("version", 6)
-            put("params", JSONObject().put("notes", notes))
-        }.toString()
-
-        val request = okhttp3.Request.Builder()
-            .url(getAnkiConnectUrl())
-            .post(body.toRequestBody())
-            .build()
-
-        withContext(Dispatchers.IO) {
-            client.newCall(request).execute().use { response ->
-                val bodyResponse = response.body.string()
-                val result = JSONObject(bodyResponse).optJSONArray("result")
-                if (result != null) {
-                    List(result.length()) { index ->
-                        val jsonObject = result.getJSONObject(index)
-                        val canAdd = jsonObject.optBoolean("canAdd", true)
-                        if (!canAdd && jsonObject.optString("error").contains("duplicate")) {
-                            duplicateTermsIndex.add(index)
-                        }
-                    }
-                }
-            }
-        }
-        return duplicateTermsIndex
     }
 
     private fun parseMarkers(fieldsMap: Map<String, String>): JSONArray =
