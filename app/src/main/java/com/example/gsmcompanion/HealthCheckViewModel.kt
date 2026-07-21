@@ -68,7 +68,9 @@ class HealthCheckViewModel(application: Application) : AndroidViewModel(applicat
                     .url("$url/yomitanVersion")
                     .post(ByteArray(0).toRequestBody())
                     .build()
-            } else { Request.Builder().url(url).build() }
+            } else {
+                Request.Builder().url(url).build()
+            }
             client.newCall(request).execute().use { response ->
                 updateStatus(
                     key,

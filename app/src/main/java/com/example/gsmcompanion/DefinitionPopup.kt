@@ -65,7 +65,9 @@ fun DefinitionBottomSheet(
             Text(
                 text = errorMessage,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
             )
         }
         val dictionaryEntries = response?.dictionaryEntries ?: return@ModalBottomSheet
@@ -74,22 +76,26 @@ fun DefinitionBottomSheet(
             Text(
                 text = "No Definitions Found",
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
             )
         } else {
-            LazyColumn (
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 24.dp)
             ) {
                 items(dictionaryEntries) { dictionaryEntry ->
-                    DictionaryEntryCard(dictionaryEntry,
+                    DictionaryEntryCard(
+                        dictionaryEntry,
                         addingTerm,
                         onAddCard,
                         duplicateTermsId,
-                        openAnkiCard)
-                    HorizontalDivider( modifier = Modifier.padding(vertical = 8.dp))
+                        openAnkiCard
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 }
             }
         }
@@ -104,8 +110,10 @@ fun DictionaryEntryCard(
     duplicateTermsId: Map<String, Long>,
     openAnkiCard: (Long) -> Unit
 ) {
-    Column (
-      modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
     ) {
         // Entry expression
         dictionaryEntry.headwords.firstOrNull()?.let { hw ->
@@ -124,24 +132,25 @@ fun DictionaryEntryCard(
                         style = MaterialTheme.typography.headlineSmall
                     )
                 }
-                Row (
-
-                ) {
+                Row {
                     duplicateTermsId[hw.term]?.let { noteId ->
                         IconButton(
                             onClick = { openAnkiCard(noteId) }
-                        ) { Icon(Icons.Default.AccountBox, "Open Anki")}
+                        ) { Icon(Icons.Default.AccountBox, "Open Anki") }
                     }
                     Button(
                         onClick = { onAddCard(hw.term) },
                         enabled = addingTerm == null
-                    ) { if (addingTerm == hw.term) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = LocalContentColor.current
-                        )
-                    } else { Text("Add to Anki") }
+                    ) {
+                        if (addingTerm == hw.term) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = LocalContentColor.current
+                            )
+                        } else {
+                            Text("Add to Anki")
+                        }
                     }
                 }
             }
@@ -162,7 +171,7 @@ fun DictionaryEntryCard(
                     text = source,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier =  Modifier.padding(top = 12.dp, bottom = 4.dp)
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                 )
             }
             definition.entries.forEach { entry ->
@@ -195,25 +204,35 @@ fun StructuredContent(node: JsonElement?) {
         else -> {}
     }
 }
+
 private fun JsonObject.dataContent(): String? =
     this["data"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
+
 @Composable
 private fun RenderElement(node: JsonObject) {
     val tag = node["tag"]?.jsonPrimitive?.contentOrNull
     val child = node["content"]
     when (tag) {
-        "br" -> Spacer(modifier = Modifier
-            .fillMaxWidth()
-            .height(4.dp))
+        "br" -> Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+        )
+
         "rt" -> {}
         "img" -> {}
         "ruby" -> RubyContent(child)
         "a" -> LinkText(node)
-        "ul", "ol" -> Column (modifier = Modifier.fillMaxWidth().padding(start = 4.dp))
+        "ul", "ol" -> Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp))
         {
             StructuredContent(child)
         }
-        "li" -> Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp))
+
+        "li" -> Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp))
         {
             Text("•  ")
             Column(modifier = Modifier.weight(1f)) {
@@ -226,14 +245,19 @@ private fun RenderElement(node: JsonObject) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.fillMaxWidth().padding(end = 4.dp, top = 8.dp, bottom = 8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 4.dp, top = 8.dp, bottom = 8.dp)
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
                     ) { StructuredContent(child) }
                 }
             } else Column(modifier = Modifier.fillMaxWidth())
-        { StructuredContent(child) }
+            { StructuredContent(child) }
+
         "span" -> SpanContent(node)
         else -> StructuredContent(child)
     }
@@ -244,11 +268,11 @@ private fun SpanContent(obj: JsonObject) {
     val child = obj["content"]
     val cssClass = obj["data"]?.jsonObject?.get("class")?.jsonPrimitive?.contentOrNull
     if (cssClass == "tag") {
-        Surface (
+        Surface(
             shape = RoundedCornerShape(4.dp),
             color = MaterialTheme.colorScheme.secondaryContainer,
             modifier = Modifier.padding(end = 4.dp, top = 2.dp, bottom = 2.dp)
-        ){
+        ) {
             Text(
                 text = plainText(child),
                 style = MaterialTheme.typography.labelSmall,
@@ -296,7 +320,7 @@ private fun RubyContent(obj: JsonElement?) {
         }
     }
     walk(obj)
-    Column (horizontalAlignment = Alignment.CenterHorizontally){
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = reading.toString(),
             fontSize = 9.sp,

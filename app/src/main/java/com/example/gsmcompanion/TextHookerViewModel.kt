@@ -363,12 +363,12 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 if (error != null && error != JSONObject.NULL) {
                     throw IllegalStateException("addNote Failed $error")
                 } else (
-                    _uiState.update {
-                        it.copy (
-                            ankiFieldsMessage = "Note Added Successfully: $result"
+                        _uiState.update {
+                            it.copy(
+                                ankiFieldsMessage = "Note Added Successfully: $result"
+                            )
+                        }
                         )
-                    }
-                )
             }
         }
 
@@ -509,17 +509,18 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
     suspend fun findDuplicateTermsIds(key: String): Map<String, Long> {
         val terms = _uiState.value.termEntriesResponse?.dictionaryEntries?.mapNotNull { hw ->
             hw.headwords.firstOrNull()?.term
-        } ?:
-            throw IllegalStateException("No Terms Found")
+        } ?: throw IllegalStateException("No Terms Found")
         val duplicatesMap: MutableMap<String, Long> = mutableMapOf()
 
         val actions = JSONArray().apply {
             terms.forEach { term ->
-                put (JSONObject().apply {
+                put(JSONObject().apply {
                     put("action", "findNotes")
-                    put("params", JSONObject().put(
-                        "query", "$key:\"$term\""
-                    ))
+                    put(
+                        "params", JSONObject().put(
+                            "query", "$key:\"$term\""
+                        )
+                    )
                 })
             }
         }
@@ -527,7 +528,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
         val body = JSONObject().apply {
             put("action", "multi")
             put("version", 6)
-            put ("params", JSONObject().put("actions", actions))
+            put("params", JSONObject().put("actions", actions))
         }.toString()
 
         val request = okhttp3.Request.Builder()

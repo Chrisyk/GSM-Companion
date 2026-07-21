@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 object AnkiFieldStore {
     private fun fieldsFor(model: String) = stringPreferencesKey("anki_fields_$model")
-    private fun firstFieldFor(model:String) = stringPreferencesKey("anki_first_field_$model")
+    private fun firstFieldFor(model: String) = stringPreferencesKey("anki_first_field_$model")
     private val SELECTED_MODEL = stringPreferencesKey("anki_selected_model")
     private val SELECTED_DECK = stringPreferencesKey("anki_selected_deck")
 
