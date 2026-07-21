@@ -9,7 +9,7 @@ It connects to a remote instance of GSM/Yomitan/AnkiConnect via a private peer-t
 
 It makes mining sentences while streaming (through Moonlight/Apollo) more intuitive via a dedicated UI, whilst maintaining a single source of truth (host).
 
-All data, such as dictionaries and Anki fields, is fetched directly from the host, ensuring same-card consistency across local and remote sessions.
+All data, such as dictionaries and Anki fields, is fetched and sent directly to the host, ensuring same-card consistency across local and remote sessions.
 
 ## Features
 
@@ -40,7 +40,7 @@ The application requires a remote connection to the main host; this means many o
 #### Anki
 1. Under Tools->Addons
 2. Ensure you have the latest version of [Anki Connect](https://ankiweb.net/shared/info/2055492159) installed
-3. Click on the Extension and Configs
+3. Click on Extensions and Configs
 4. Change "WebBindAddress" to that of the Gateway IP
 
 #### Yomitan
