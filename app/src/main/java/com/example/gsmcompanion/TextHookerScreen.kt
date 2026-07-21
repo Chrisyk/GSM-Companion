@@ -73,7 +73,7 @@ fun TextHookerScreen(
     LaunchedEffect(uiState.ankiFieldsMessage) {
         if (uiState.ankiFieldsMessage != null) {
             Toast.makeText(context, uiState.ankiFieldsMessage, Toast.LENGTH_SHORT).show()
-            viewModel.consumeAnkiError()
+            viewModel.consumeAnkiMessage()
         }
     }
     Scaffold(

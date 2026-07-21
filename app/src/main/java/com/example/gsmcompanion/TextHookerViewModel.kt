@@ -614,7 +614,7 @@ class TextHookerViewModel(application: Application) : AndroidViewModel(applicati
                 .distinct()
         )
 
-    fun consumeAnkiError() {
+    fun consumeAnkiMessage() {
         _uiState.update {
             it.copy(
                 ankiFieldsMessage = null
