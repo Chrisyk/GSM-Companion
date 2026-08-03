@@ -22,13 +22,17 @@ All data, such as dictionaries and Anki fields, is fetched and sent directly to 
 
 ## Installation
 
-The application requires a remote connection to the main host; this means many of the default ports (127.0.0.1) will not be accessible remotely and thus need to be changed.
+The application requires a remote connection to the main host; this means many default ports (127.0.0.1) will not be accessible remotely and need to be changed.
 
 **Gateway IP**: Before starting, ensure you have either a private address if you intend to play on the same home network, or a private peer-to-peer mesh service such as TailScale or Twingate if you intend to play from a remote network.
 
-### Automated (Work-In-Progress)
+### Automated (Port Proxy Manager)
 
-...Coming Soon...
+Port Proxy Manager will forward any gateway's request to the host pc's localhost. It uses netsh to configure TCP port forwarding and redirect incoming network traffic from one IP address port to another. Warning: port forwarding and firewall rules require elevated administrator privileges.
+
+1. Install the .exe file from [releases](https://github.com/Chrisyk/GSM-Companion/releases)
+2. Set up the gateway(s) and ports
+3. Click Apply Proxies
 
 ### Manual
 
